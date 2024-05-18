@@ -23,6 +23,8 @@ public:
 	void heunm(double x0, double y0, double dt, double start, double end);
 	void rungeKuttam(double x0, double y0, double dt, double start, double end, double* c, double* b, double (&a)[4][4]);
 	
+	int check_consistencyOrder(double (&c)[4], double (&b)[4], double (&a)[4][4]);
+
 	static double RK4[3][4][4];
 	static double RK38rule[3][4][4];
 		
@@ -32,7 +34,4 @@ private:
 	
 	void print_data(double x, double y, std::ofstream& target);
 	void print_empty(std::ofstream& target);
-
-	uint8_t check_consistencyOrder(std::vector<double> c, std::vector<double> b, std::vector<std::vector<double>> a);
-	double ak_sum(double (&a)[4][4], double (&k)[4], int j);
 };
