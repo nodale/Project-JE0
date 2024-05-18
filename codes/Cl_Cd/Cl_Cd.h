@@ -13,7 +13,14 @@ class CL_CD
 	//gamma is the difference between both, resulting in the angle of attack for the lift and drag calculation
 
 public:
+
 	template<typename d>
 	CL_CD(d a, d b);
 	
+	template<typename d>
+	d getCl(d a,d b);
+
+	template<typename d>
+	d getCd(d a,d b);
+
 };
