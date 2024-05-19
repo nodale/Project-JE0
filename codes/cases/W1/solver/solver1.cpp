@@ -16,9 +16,15 @@ solver1::solver1(char* file, char* file2)
 
 double solver1::func(double x, double y)
 {
+	return 0;
+}
+double* solver1::func(double x, double y, double z)
+{
+	return 0;
 }
 double solver1::func_real(double x, double y)
 {
+	return 0;
 }
 void solver1::print_data(double x, double y, std::ofstream& target)
 {
@@ -166,11 +172,11 @@ void solver1::rungeKuttam(double x0, double y0, double dt, double start, double 
 	double sum = 0;
 	double k[4] = { 0 };
 	//applying the initial conditions
-	k[0] = func(x0, y0);
-	k[1] = func(x0 + c[1] * dt, y0 + ( a[1][0] * k[0] ) * dt);
-	k[2] = func(x0 + c[2] * dt, y0 + ( a[2][0] * k[1] + a[2][1] * k[2] ) * dt);
-	k[3] = func(x0 + c[3] * dt, y0 + ( a[3][0] * k[1] + a[3][1] * k[2] + a[3][2] * k[2] ) * dt);
-	yi = y0 + dt * (b[0]*k[0] + b[1]*k[1] + b[2]*k[2] + b[3]*k[3]);
+	//k[0] = func(x0, y0);
+	//k[1] = func(x0 + c[1] * dt, y0 + ( a[1][0] * k[0] ) * dt);
+	//k[2] = func(x0 + c[2] * dt, y0 + ( a[2][0] * k[1] + a[2][1] * k[2] ) * dt);
+	//k[3] = func(x0 + c[3] * dt, y0 + ( a[3][0] * k[1] + a[3][1] * k[2] + a[3][2] * k[2] ) * dt);
+	yi = y0; //+ dt * (b[0]*k[0] + b[1]*k[1] + b[2]*k[2] + b[3]*k[3]);
 	std::fill(k, k + 4, 0);
 	
 	//backward

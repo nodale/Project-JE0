@@ -10,10 +10,7 @@ class solver1
 	std::ofstream file_out, file_real_out;
 	char* filename;
 	char* filename_real;
-
-
-public:
-	
+public:	
 	solver1(char* file);
 	solver1(char* file, char* file2);
 	
@@ -28,8 +25,9 @@ public:
 	static double RK4[3][4][4];
 	static double RK38rule[3][4][4];
 		
-private:
+protected:
 	virtual double func(double x, double y);
+	virtual double* func(double x, double y, double z);
 	virtual double func_real(double x, double y);
 	
 	void print_data(double x, double y, std::ofstream& target);
