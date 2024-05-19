@@ -41,8 +41,8 @@ void solver1::eulerm(double x0, double y0, double dt, double start, double end)
 {
 	double y, yi;
 	//applying the initial conditions	
-	yi = y0 + dt * func(x0, y0);
-	
+//	yi = y0 + dt * func(x0, y0);
+	yi = y0;
 	//backward
 	if(x0 > start)
 	{
@@ -80,9 +80,9 @@ void solver1::heunm(double x0, double y0, double dt, double start, double end)
 {
 	double y_approx, y_approxb, y_approxf, y, yi;
 	//applying the initial conditions	
-	y_approx = y0 + dt * func(x0, y0);
-	yi = y0 + dt * 0.5 * ( func(x0, y0) + func(x0, y_approx) );
-
+//	y_approx = y0 + dt * func(x0, y0);
+//	yi = y0 + dt * 0.5 * ( func(x0, y0) + func(x0, y_approx) );
+	yi = y0;
 	//backward
 	if(x0 > start)
 	{
@@ -160,13 +160,13 @@ void solver1::rungeKuttam(double x0, double y0, double dt, double start, double 
 	double sum = 0;
 	double k[4] = { 0 };
 	//applying the initial conditions
-	k[0] = func(x0, y0);
-	k[1] = func(x0 + c[1] * dt, y0 + ( a[1][0] * k[0] ) * dt);
-	k[2] = func(x0 + c[2] * dt, y0 + ( a[2][0] * k[1] + a[2][1] * k[2] ) * dt);
-	k[3] = func(x0 + c[3] * dt, y0 + ( a[3][0] * k[1] + a[3][1] * k[2] + a[3][2] * k[2] ) * dt);
-	yi = y0 + dt * (b[0]*k[0] + b[1]*k[1] + b[2]*k[2] + b[3]*k[3]);
-	std::fill(k, k + 4, 0);
-	
+//	k[0] = func(x0, y0);
+//	k[1] = func(x0 + c[1] * dt, y0 + ( a[1][0] * k[0] ) * dt);
+//	k[2] = func(x0 + c[2] * dt, y0 + ( a[2][0] * k[1] + a[2][1] * k[2] ) * dt);
+//	k[3] = func(x0 + c[3] * dt, y0 + ( a[3][0] * k[1] + a[3][1] * k[2] + a[3][2] * k[2] ) * dt);
+//	yi = y0 + dt * (b[0]*k[0] + b[1]*k[1] + b[2]*k[2] + b[3]*k[3]);
+//	std::fill(k, k + 4, 0);
+	yi = y0;	
 	//backward
 	if( x0 > start)
 	{
