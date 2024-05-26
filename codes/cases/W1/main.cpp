@@ -21,7 +21,7 @@ class X : public solver1
 {
 double wx[2] = { 1.0 , 10.0};
 double q;
-/*
+
 public:
 	
 	void rungeKuttam(double x0, double y0, double dt, double start, double end, double* c, double* b, double (&a)[4][4]) final
@@ -59,7 +59,7 @@ public:
 	timer -= dt;
 	}
 
-	solver1::print_empty(solver1::file_out);
+	print_empty(file_out);
 	}
 
 	//forward
@@ -87,10 +87,11 @@ public:
 
 	print_empty(file_out);
 }
-*/
+
 private:
 	using solver1::solver1;
 	
+	/*
 	double func(double x, double y) final
 	{
 		q = k * sqrt( pow( y, 2 ) + pow( wx[1], 2 ) ) / wx[0];
@@ -98,9 +99,9 @@ private:
 		wx[0] = q * ( v.getCl( alpha, getBeta( y , wx[1] ) ) - v.getCd( alpha, getBeta( y , wx[1] ) ) );
 		return wx[0];
 	}
+	*/
 
-
-	/*
+	
 	double* func(double x, double y, double z) final
 	{
 		//y is x1, z is x2	
@@ -110,7 +111,7 @@ private:
 		wx[1] = q * ( -v.getCl( alpha, getBeta( y , z ) ) - v.getCd( alpha, getBeta( y , z ) ) );
 		return wx;
 	}
-	*/
+
 /*
  		 q = k * sqrt( pow( y, 2 ) + pow( x2, 2 ) ) / x1;
 

@@ -6,11 +6,12 @@
 
 class solver1
 {
+public:
 	double output;
 	std::ofstream file_out, file_real_out;
 	char* filename;
 	char* filename_real;
-public:	
+
 	solver1(char* file);
 	solver1(char* file, char* file2);
 	
