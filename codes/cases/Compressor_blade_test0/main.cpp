@@ -8,38 +8,57 @@
 #define e 2.718281828459045
 #define PI 3.14159265
 #define RadToDegree 57.29577951
+#define Cp 1004.5
 
 class Blade
 {
 
 std::ofstream fileOut;
 
-double VX[4];
-double tip_radi[9][4];
-double hub_radi[9][4];
-double mean_radi[9][4];
+double VX[3];
+double tip_radi[11][3];
+double hub_radi[11][3];
+double mean_radi[11][3];
 double omega1;
 double omega2;
-double v[9][4];
+double v[11][3];
 //resolution is 100 here 
-double angle[9][4][100];
+double angle[11][3][100];
+double meanAlpha1[11][3];
 double Mach0;
 double resolution;
 double a,b;
-
+double PR[11][3];
 //work-done factor
 double WDF[18] = { 0.982, 0.952, 0.929, 0.910, 0.895, 0.882, 0.875, 0.868, 0.863, 0.860, 0.857, 0.855, 0.853, 0.851, 0.850, 0.849, 0.848, 0.847 };
 
+//thermodynamics initial conditions
+double T1;
+double rho1;
+double P1;
+
+double Temperature[11][3];
+double TemperatureStag[11][3];
+double Pressure[11][3];
+double PressureStag[11][3];
+double rho[11][3];
+double psi[11][3];
+double phi[11][3];
+
 public:
 
-Blade(double (&tip)[9][4], double (&hub)[9][4], double w1, double res, double vx1, double vx2)
+Blade(double (&tip)[11][4], double (&hub)[11][4], double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11][4], double Temp, double rho, double P, double (&initial_alpha1)[11][3])
 : omega1 { w1 }
+, omega2 { w2 }
 , resolution { res }
-, VX { vx1, vx2, vx2, vx1 }
+, VX { vx1, vx2, vx1 }
+, T1 { Temp }
+, rho1 { rho }
+, P1 { P }
 {
     fileOut.open("out.dat");
 
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 11; i++)
     {
         for(int j = 0; j < 4; j++)
         {
@@ -47,44 +66,44 @@ Blade(double (&tip)[9][4], double (&hub)[9][4], double w1, double res, double vx
             tip_radi[i][j] = tip[i][j];
 
             mean_radi[i][j] = ( hub[i][j] + tip[i][j] ) / 2;
+
+            PR[i][j] = deltaP[i][j];
+
+            meanAlpha1[i][j] = initial_alpha1[i][j];
         }
     }
 }
 
-/* void getExponentialVortexConst()
+//to initialise and calculate all thermodynamics and other variables
+void init()
 {
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 3; i++)
     {
-        for(int j = 0; j < 4; j++)
+        for(int j = 0; j < 3; j++)
         {
-            auto vhub = hub_radi[i][j] * omega1;
-            auto vtip = tip_radi[i][j] * omega1;
-
-            vortexConst[i][j] = log( vtip / vhub ) / tip_radi[i][j];
-            VortexVReference[i][j] = vhub;
+            phi[i][j] = omega1 * mean_radi[i][j];
         }
-    } ctrl shift a to auto comment
-} */
+    }
 
-void getFlowPath(int i, int j, double R, double psi) //R and psi are temporarily 0.5 for the mean radius
-{   
-    double alpha1, alpha2, alpha3;
-    double beta1, beta2, beta3;
-
-    alpha1 = atan2( ( 1 - R - psi/2 ) , ( VX[j] / ( omega1 * mean_radi[i][j] ) ) )* RadToDegree;
-    alpha2 = atan2( ( 1 - R + psi/2 ) , ( VX[j] / ( omega1 * mean_radi[i][j] ) ) )* RadToDegree;
-    alpha3 = alpha1;
-
-    beta1 = atan2( ( - R + psi/2 ) , ( VX[j] / ( omega1 * mean_radi[i][j] ) ) )* RadToDegree;
-    beta2 = atan2( ( - R - psi/2 ) , ( VX[j] / ( omega1 * mean_radi[i][j] ) ) )* RadToDegree;
-    beta3 = beta1;
-
-    //std::cout << alpha1 << "\n" << alpha2 << "\n" << beta1 << "\n" << beta2 << "\n";
-
-    getDeHallerNumber(alpha1, alpha2, beta1, beta2);
-    //getSolidity( VX[j] / ( omega1 * mean_radi[i][j] ) , psi);
+    for(int i = 3; i < 11; i++)
+    {
+        for(int j = 0; j < 3; j++)
+        {
+            phi[i][j] = VX[j] / ( mean_radi[i][j] * omega1 );
+            //TODO use alpha1 and axial velocity to calculate the rest
+        }
+    }
 }
 
+
+void getFlowPath(int i, double R, double r)
+{   
+    
+
+    //alpha1 = atan2( ( 1 - R - psi/2 ) , ( VX[j] / ( omega1 * mean_radi[i][j] ) ) )* RadToDegree;
+}
+
+/*
 void getFlowPath(int i, int j, double R, float alpha1) //R is temporarily 0.5 for the mean radius
 {   
     double phi, alpha2, alpha3;
@@ -129,10 +148,10 @@ void getFlowPath(int i, int j, double R, double psi, double f) //R and psi are t
     }
     //getSolidity( VX[j] / ( omega1 * mean_radi[i][j] ) , psi);
 }
-/* void getLossCoefficient(int i, int j)
+void getLossCoefficient(int i, int j)
 {
     double lossRotor = 
-} */
+} 
 
 void getBladeAngles( int i, int j)
 {
@@ -184,6 +203,12 @@ void getBladeAngles( int i, int j)
 
 }
 
+void FullNormalEquilibrium()
+{
+
+}
+*/
+
 private:
 
 void printOut( std::ofstream &out, double value1, double value2)
@@ -229,6 +254,11 @@ double getBladeEnthalpy(double from, double to, double step, double radius, doub
     }
     std::cout << total << std::endl;
     return total;
+}
+
+virtual double StreamSurface(double x, double y)
+{
+    return y;
 }
 
 };
