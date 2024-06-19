@@ -24,7 +24,8 @@ double omega1;
 double omega2;
 double v[11][3];
 //resolution is 100 here 
-double angle[12][3][100];
+double alpha[12][4][100];
+double beta[12][4][100];
 double meanAlpha[12][2];
 double meanBeta[11][2];
 double Mach0;
@@ -32,6 +33,7 @@ double resolution;
 double PR[11];
 double R[11];
 double Area[11][3];
+double chord[11][2];
 //work-done factor
 double WDF[18] = { 0.982, 0.952, 0.929, 0.910, 0.895, 0.882, 0.875, 0.868, 0.863, 0.860, 0.857, 0.855, 0.853, 0.851, 0.850, 0.849, 0.848, 0.847 };
 
@@ -56,7 +58,7 @@ double solidity[11];
 
 public:
 
-Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11] )
+Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11], double (&c)[11][2] )
 : omega1 { w1 }
 , omega2 { w2 }
 , resolution { res }
@@ -70,16 +72,16 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     {
         for(int j = 0; j < 4; j++)
         {
-            //hub_radi[i][j] = hub[i][j];
             tip_radi[i][j] = tipP[i][j];
-
-            //mean_radi[i][j] = ( hub[i][j] + tip[i][j] ) / 2;
 
             PR[i] = deltaP[i];
 
             meanAlpha[i][0] = initial_alpha1[i];
 
             R[i] = Reaction[i];
+
+            chord[i][0] = c[i][0];
+            chord[i][1] = c[i][1];
         }
     }
 
@@ -241,6 +243,55 @@ void init()
     //std::cout << Pressure[10][2] << std::endl; 
 }
 
+void getBladeAngles(int i)
+{
+    double dr1, dr2, radius1, radius2, E, alphaPoint;
+    double theta, k1, k2, delta, dIncidence, incidencePoint, deltaPoint, Kti, Ktdelta;
+    double q, delta0Point, m, m10, tempX, tempB;
+
+    dr1 = ( tip_radi[i][0] - hub_radi[i][0] ) / resolution ;
+    dr2 = ( tip_radi[i][1] - hub_radi[i][1] ) / resolution ;
+
+    //chosen incidence angle
+    double incidence = 0;
+    //chosen stagger angle
+    double stagger = 15;
+    double Ksh = 1.0;
+    double tb = 0.1 * chord[i][0];
+    //the distance to maximum thickness, might need to change it later
+    double distToMax = 0.5;
+
+    //for the rotor blades
+    for(int r = 0; r < resolution; r++)
+    {
+        radius1 = hub_radi[i][0] + r * dr1;
+        radius2 = hub_radi[i][1] + r * dr2;
+        k1 = beta[i][0][r];
+        k2 = beta[i][1][r];
+
+        //need a loop for the following
+        theta = beta[i][0] - beta[i][1]; 
+        E = 0.65 - 0.002 * theta;
+        q = 0.28 / ( 0.1 + pow( tb / chord[i][0] , 0.3 ) );
+        Kti = pow( 10 * tb / chord[i][0] , q );
+        alphaPoint = ( 3.6 * Ksh * Kti + 0.3532 * theta * pow( distToMax / chord[i][0] , 0.25 ) ) * pow( theta , e );
+        incidencePoint = alphaPoint + stagger - k1;
+
+        delta0Point = 0.01 * solidity[i] * beta[i][0][r] + ( 0.74 * pow( solidity[i] , 1.9 ) + 3 * solidity[i] ) * pow( beta[i][0][r] / 90 , 1.67 + 1.09 * solidity[i] );
+        tempX = beta[i][0][r] / 100;
+        m10 = 0.17 - 0.0333 * tempX + 0.333 * pow( tempX , 2 ) ;
+        tempB = 0.9625 - 0.17 * tempX - 0.85 * pow( tempX , 3 );
+        m = m10 / pow( solidity[i] , tempB );
+        Ktdelta = 6.25 * ( tb / chord[i][0] ) + 37.5 * pow( tb / chord[i][0] , 2 );
+        deltaPoint = Ksh * Ktdelta * delta0Point + m * theta;
+
+        dIncidence = incidence - incidencePoint;
+
+        k1 = beta[i][0][r] - incidencePoint - dIncidence;
+        k2 = beta[i][1][r] - deltaPoint;
+    }
+    std:: cout << k1 << std::endl;
+}
 
 /*
 void FullNormalEquilibrium()
@@ -302,6 +353,19 @@ int main()
     double delta_P[11] = { 1.125, 1.15, 1.15, 1.225, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25 };
     double init_alpha1[12] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 10, 10 };
     double degOfReaction[11] = { 0.5, 0.5, 0.5, 0.6, 0.6, 0.6,0.6, 0.6, 0.6, 0.6, 0.6 };
+    double chordLengths[11][2] = {
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+        { 0.015 , 0.015 },
+    };
     double rHub = 0.05;
     double omega_1 = 2850;
     double omega_2 = 6800;
@@ -312,9 +376,12 @@ int main()
     double rho_ = 1.204;
     double Pres = 103.15;
 
-    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction );
+    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths );
 
-    test.init();
+    //test.init();
+
+    //angles are not available yet, need to initialise them for every r
+    test.getBladeAngles(0);
 
     return 0;
 }
