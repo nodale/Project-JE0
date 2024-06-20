@@ -1,3 +1,5 @@
+
+#pragma once
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -14,8 +16,8 @@ class solver1
 
 public:
 	
-	solver1(char* file);
-	solver1(char* file, char* file2);
+	void init(char* file, std::ofstream &file_out);
+	void init(char* file, char* file2, std::ofstream &file_out, std::ofstream &file_real_out);
 	
 	void real(double dt, double start, double end);
 

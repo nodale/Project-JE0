@@ -1,17 +1,14 @@
 #include "solver1.h"
 
-solver1::solver1(char* file)
-	: filename { file }
+void init(char* file, std::ofstream &file_out)
 {
 	file_out.open(file);
 }
 
-solver1::solver1(char* file, char* file2)
-	: filename { file }
-	, filename_real { file2 }
+void init(char* file, char* file2, std::ofstream &file_out, std::ofstream &file_real_out)
 {
 	file_out.open(file);
-	file_real_out.open(file2);
+	file_real_out.open(file);
 }
 
 void solver1::print_data(double x, double y, std::ofstream& target)

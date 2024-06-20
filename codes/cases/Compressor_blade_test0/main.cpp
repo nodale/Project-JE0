@@ -13,13 +13,14 @@
 #define Cp 1004.5
 #define gamma 1.4
 
-class Blade : solver1
+class Blade : public solver1
 {
 
 std::ofstream fileOut;
 std::ofstream fileOut2;
 std::ofstream fileOut3;
 std::ofstream fileOut4;
+std::ofstream camberFile;
 
 double VX[3];
 double tip_radi[11][3];
@@ -66,9 +67,8 @@ double Ws[11];
 double solidity[11];
 
 public:
-Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11], double (&c)[11][2], char* fileD )
-: solver1(fileD ) 
-,omega1 { w1 }
+Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11], double (&c)[11][2])
+: omega1 { w1 }
 , omega2 { w2 }
 , resolution { res }
 , VX { vx1, vx2, vx1 }
@@ -79,6 +79,8 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     fileOut2.open("out2.dat");
     fileOut3.open("out3.dat");
     fileOut4.open("out4.dat");
+    char camFilename[] = "camberline.dat";
+    solver1::init(camFilename, camberFile);
 
     for(int i = 0; i < 11; i++)
     {
@@ -426,6 +428,11 @@ double func(double x, double y) final
     return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
 
+double func_real(double x, double y) final
+{
+    return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
+}
+
 };
 
 int main()
@@ -469,9 +476,7 @@ int main()
     double rho_ = 1.204;
     double Pres = 103.15;
 
-    char fileD[] = "camberline.dat";
-
-    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths, fileD );
+    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths);
 
     test.init();
 
