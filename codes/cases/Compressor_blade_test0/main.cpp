@@ -20,7 +20,6 @@ std::ofstream fileOut;
 std::ofstream fileOut2;
 std::ofstream fileOut3;
 std::ofstream fileOut4;
-std::ofstream camberFile;
 
 double VX[3];
 double tip_radi[11][3];
@@ -80,7 +79,7 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     fileOut3.open("out3.dat");
     fileOut4.open("out4.dat");
     char camFilename[] = "camberline.dat";
-    solver1::init(camFilename, camberFile);
+    solver1::initFile(camFilename);
 
     for(int i = 0; i < 11; i++)
     {
@@ -369,6 +368,7 @@ void getBladeAngles(int i)
     }
 }
 
+//j is either one(rotor) or two(stator)
 void getCamberline(int i, int j, int r)
 {
     //distance to the maximum camber, dimesionless
@@ -384,8 +384,9 @@ void getCamberline(int i, int j, int r)
     dummyMaxCamPos = maxCamPos[i][j];
     dummyChord = chord[i][j];
 
-    rungeKuttam(0, 0, 1 / resolution, 0, 0, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+    std::cout << dummyChord << " " << chord[i][j] << " " << dummyChord << std::endl;
 
+    solver1::rungeKuttam(0.0, 0.0, 0.1 / resolution, 0.0, 1.0, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
 }
 
 /*
@@ -423,12 +424,12 @@ bool getDeHallerNumber(double alpha1, double alpha2, double beta1, double beta2)
         return 0;
 }
 
-double func(double x, double y) final
+double func(double x, double y) override
 {
     return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
 
-double func_real(double x, double y) final
+double func_real(double x, double y) override
 {
     return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
@@ -483,6 +484,7 @@ int main()
     //angles are not available yet, need to initialise them for every r
     test.getFlowPaths(0);
     test.getBladeAngles(0);
+    test.getCamberline(0,0,100);
 
     return 0;
 }

@@ -1,11 +1,12 @@
 #include "solver1.h"
+#include <fstream>
 
-void init(char* file, std::ofstream &file_out)
+void solver1::initFile(char* file)
 {
 	file_out.open(file);
 }
 
-void init(char* file, char* file2, std::ofstream &file_out, std::ofstream &file_real_out)
+void solver1::initFile(char* file, char* file2)
 {
 	file_out.open(file);
 	file_real_out.open(file);
@@ -34,12 +35,12 @@ void solver1::real(double dt, double start, double end)
 	}
 }	
 
-double func(double x, double y)
+double solver1::func(double x, double y)
 {
 	return 0;
 }
 
-double func_real(double x, double y)
+double solver1::func_real(double x, double y)
 {
 	return 0;
 }
@@ -163,6 +164,7 @@ int solver1::check_consistencyOrder(double (&c)[4], double (&b)[4], double (&a)[
 
 void solver1::rungeKuttam(double x0, double y0, double dt, double start, double end, double* c, double* b, double (&a)[4][4])
 {
+	
 	double y, yi;
 	double sum = 0;
 	double k[4] = { 0 };
