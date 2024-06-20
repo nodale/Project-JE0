@@ -1,9 +1,11 @@
+#include <filesystem>
 #include <iostream>
 #include <cstdint>
 #include <cmath>
 #include <fstream>
 #include <ratio>
 #include <vector>
+#include "ODE_solver/solver1.h"
 
 #define e 2.718281828459045
 #define PI 3.14159265
@@ -11,10 +13,13 @@
 #define Cp 1004.5
 #define gamma 1.4
 
-class Blade
+class Blade : solver1
 {
 
 std::ofstream fileOut;
+std::ofstream fileOut2;
+std::ofstream fileOut3;
+std::ofstream fileOut4;
 
 double VX[3];
 double tip_radi[11][3];
@@ -24,8 +29,8 @@ double omega1;
 double omega2;
 double v[11][3];
 //resolution is 100 here 
-double alpha[12][4][100];
-double beta[12][4][100];
+double alpha[12][3][200];
+double beta[12][2][200];
 double meanAlpha[12][2];
 double meanBeta[11][2];
 double Mach0;
@@ -34,6 +39,10 @@ double PR[11];
 double R[11];
 double Area[11][3];
 double chord[11][2];
+double maxCam[11][2];
+double maxCamPos[11][2];
+//dummy variables
+double dummyMaxCam, dummyMaxCamPos, dummyChord;
 //work-done factor
 double WDF[18] = { 0.982, 0.952, 0.929, 0.910, 0.895, 0.882, 0.875, 0.868, 0.863, 0.860, 0.857, 0.855, 0.853, 0.851, 0.850, 0.849, 0.848, 0.847 };
 
@@ -57,9 +66,9 @@ double Ws[11];
 double solidity[11];
 
 public:
-
-Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11], double (&c)[11][2] )
-: omega1 { w1 }
+Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, double vx1, double vx2, double (&deltaP)[11], double Temp, double P, double (&initial_alpha1)[12], double (&Reaction)[11], double (&c)[11][2], char* fileD )
+: solver1(fileD ) 
+,omega1 { w1 }
 , omega2 { w2 }
 , resolution { res }
 , VX { vx1, vx2, vx1 }
@@ -67,6 +76,9 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
 , P1 { P }
 {
     fileOut.open("out.dat");
+    fileOut2.open("out2.dat");
+    fileOut3.open("out3.dat");
+    fileOut4.open("out4.dat");
 
     for(int i = 0; i < 11; i++)
     {
@@ -156,7 +168,7 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     double vu1_r = VX[0] * tan( meanAlpha[0][0] / RadToDegree );
     double vu2_r = VX[0] * tan( meanAlpha[0][1] / RadToDegree );
     a[0] = 0.5 * ( vu1_r + vu2_r );
-    b[0] = 0.5 * ( vu1_r - vu2_r );
+    b[0] = 0.5 * ( vu2_r - vu1_r );
 
     //std::cout << Pressure[0][0] << " " << Pressure[0][1] << " " << Pressure[0][2] << std::endl;
 
@@ -173,9 +185,18 @@ void init()
     Temperature[i][0] = Temperature[i-1][2];
     Pressure[i][0] = Pressure[i-1][2];
     rho[i][0] = rho[i-1][0];
+    mean_radi[i][0] = mean_radi[i-1][2];
+    hub_radi[i][0] = hub_radi[i-1][2];
 
     //phi
+    if( i < 3 )
+    {
     phi[i] =  VX[0] / ( omega1 * mean_radi[i][0] );
+    }
+    if( i >= 3 )
+    {
+    phi[i] =  VX[0] / ( omega2 * mean_radi[i][0] );
+    }
     //beta 1
     meanBeta[i][0] = atan( tan( meanAlpha[i][0] / RadToDegree ) - 1 / phi[i] ) * RadToDegree;
     //Temperature 3
@@ -192,9 +213,16 @@ void init()
     //Stagnation pressure 2
     PressureStag[i][1] = PressureStag[i][0] * pow( ( TemperatureStag[i][1] / TemperatureStag[i][0] ) , gamma / ( gamma - 1 ) );
     //psi
+    if( i < 3 )
+    {
     psi[i] = work / pow( omega1 * mean_radi[i][0] , 2 );
+    }
+    if( i >= 3 )
+    {
+    psi[i] = work / pow( omega2 * mean_radi[i][0] , 2 );
+    }
     //alpha 2
-    meanAlpha[i][1] = atan2( psi[i] , phi[i] * WDF[i] ) * RadToDegree;
+    meanAlpha[i][1] = atan2( psi[i] , phi[i] ) * RadToDegree;
      //beta 2
     meanBeta[i][1] = atan( tan( meanAlpha[i][1] / RadToDegree ) - 1 / phi[i] ) * RadToDegree;
     //Temperature 2
@@ -203,8 +231,8 @@ void init()
     Pressure[i][1] = Pressure[i][0] * pow( ( Temperature[i][1] / Temperature[i][0] ) , gamma / ( gamma - 1 ) );
     //Pressure 3, needs mean alpha
     Pressure[i][2] = PressureStag[i][2] * pow( ( TemperatureStag[i][2] / Temperature[i][2] ) , -gamma / ( gamma - 1 ) );
-   //Area stag 1, station 1
-    Area[i][0] = PI * (  pow( tip_radi[i][0] , 2 ) - pow( hub_radi[i][0] , 2 ) );
+   //Area station 1
+    Area[i][0] = Area[i-1][2];
 
     //rho 1,2,3
     for(int j = 0; j < 3; j++)
@@ -221,7 +249,7 @@ void init()
 
     for(int j = 0; j < 3; j++)
     {
-    hub_radi[i][j] = sqrt( -( Area[i][j] / PI ) + pow( tip_radi[i][j] , 2 )  ); 
+    hub_radi[i][j] = pow( -( Area[i][j] / PI ) + pow( tip_radi[i][j] , 2 ) , 0.5  ); 
     }
 
     for(int j = 1; j < 3; j++)
@@ -231,22 +259,58 @@ void init()
 
     solidity[i] = ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] );
 
-    double vu1_r = VX[i] * tan( meanAlpha[i][0] / RadToDegree );
-    double vu2_r = VX[i] * tan( meanAlpha[i][1] / RadToDegree );
+    double vu1_r = VX[0] * tan( meanAlpha[i][0] / RadToDegree );
+    double vu2_r = VX[0] * tan( meanAlpha[i][1] / RadToDegree );
     a[i] = 0.5 * ( vu1_r + vu2_r );
-    b[i] = 0.5 * ( vu1_r - vu2_r );
-
-    //std::cout << Pressure[i][0] << " " << Pressure[i][1] << " " << Pressure[i][2] << std::endl;
-
+    b[i] = 0.5 * ( vu2_r - vu1_r );
     }
-
     //std::cout << Pressure[10][2] << std::endl; 
+}
+
+void getFlowPaths(int i)
+{
+    double dr1, dr2, radius1, radius2, y;
+    double tempPhi, tempVu1, tempVu2;
+    dr1 = ( tip_radi[i][0] - hub_radi[i][0] ) / resolution ;
+    dr2 = ( tip_radi[i][1] - hub_radi[i][1] ) / resolution ;
+
+    for(int r = 0; r <= resolution; r++)
+    {
+        radius1 = hub_radi[i][0] + r * dr1;
+        radius2 = hub_radi[i][1] + r * dr2;
+
+        y = radius1 / mean_radi[i][0]; 
+
+        tempVu1 = a[i] - b[i]/y;
+        tempVu2 = a[i] + b[i]/y;
+        
+        //TODO get phi for every radius
+        if( i < 3)
+        {
+        tempPhi = VX[0] / ( omega1 * radius1 );
+        }
+        if(i >= 3)
+        {
+        tempPhi = VX[0] / ( omega2 * radius1 );  
+        }
+
+        alpha[i][0][r] = atan2( tempVu1 , VX[i] ) * RadToDegree;
+        alpha[i][1][r] = atan2( tempVu2 , VX[i] ) * RadToDegree;
+
+        beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
+        beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
+
+        printOut(fileOut, r, alpha[i][0][r]); 
+        printOut(fileOut2, r, alpha[i][1][r]);
+        printOut(fileOut3, r, beta[i][0][r]);
+        printOut(fileOut4, r, beta[i][1][r]);       
+    }
 }
 
 void getBladeAngles(int i)
 {
     double dr1, dr2, radius1, radius2, E, alphaPoint;
-    double theta, k1, k2, delta, dIncidence, incidencePoint, deltaPoint, Kti, Ktdelta;
+    double theta, k1, k2, dummyK1, dummyK2, delta, dIncidence, incidencePoint, deltaPoint, Kti, Ktdelta;
     double q, delta0Point, m, m10, tempX, tempB;
 
     dr1 = ( tip_radi[i][0] - hub_radi[i][0] ) / resolution ;
@@ -260,24 +324,28 @@ void getBladeAngles(int i)
     double tb = 0.1 * chord[i][0];
     //the distance to maximum thickness, might need to change it later
     double distToMax = 0.5;
+    bool stop = 0;
 
     //for the rotor blades
-    for(int r = 0; r < resolution; r++)
+    for(int r = 0; r <= resolution; r++)
     {
+        stop = 0;
         radius1 = hub_radi[i][0] + r * dr1;
         radius2 = hub_radi[i][1] + r * dr2;
         k1 = beta[i][0][r];
         k2 = beta[i][1][r];
+        dummyK1 = k1;
+        dummyK2 = k2;
 
-        //need a loop for the following
-        theta = beta[i][0] - beta[i][1]; 
+        //need a loop for the following, use the stop boolean and if statement commented below
+        theta = beta[i][0][r] - beta[i][1][r]; 
         E = 0.65 - 0.002 * theta;
         q = 0.28 / ( 0.1 + pow( tb / chord[i][0] , 0.3 ) );
         Kti = pow( 10 * tb / chord[i][0] , q );
         alphaPoint = ( 3.6 * Ksh * Kti + 0.3532 * theta * pow( distToMax / chord[i][0] , 0.25 ) ) * pow( theta , e );
         incidencePoint = alphaPoint + stagger - k1;
 
-        delta0Point = 0.01 * solidity[i] * beta[i][0][r] + ( 0.74 * pow( solidity[i] , 1.9 ) + 3 * solidity[i] ) * pow( beta[i][0][r] / 90 , 1.67 + 1.09 * solidity[i] );
+        delta0Point = 0.01 * solidity[i] * beta[i][0][r] + ( 0.74 * pow( solidity[i] , 1.9 ) + 3 * solidity[i] ) * pow( fabs( beta[i][0][r] ) / 90 , 1.67 + 1.09 * solidity[i] );
         tempX = beta[i][0][r] / 100;
         m10 = 0.17 - 0.0333 * tempX + 0.333 * pow( tempX , 2 ) ;
         tempB = 0.9625 - 0.17 * tempX - 0.85 * pow( tempX , 3 );
@@ -289,8 +357,33 @@ void getBladeAngles(int i)
 
         k1 = beta[i][0][r] - incidencePoint - dIncidence;
         k2 = beta[i][1][r] - deltaPoint;
+
+        /* //convergence test
+        if ( k1 / 1.05 <= dummyK1 <= k1 * 1.05 && k2 / 1.05 <= dummyK2 <= k2 * 1.05 )
+        {
+            stop = 1;
+        } */
+
     }
-    std:: cout << k1 << std::endl;
+}
+
+void getCamberline(int i, int j, int r)
+{
+    //distance to the maximum camber, dimesionless
+    maxCamPos[i][j] = 0.5;
+    double theta;
+
+    theta = beta[i][0][r] - beta[i][1][r]; 
+
+    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( 1 + pow( 4 * tan( theta / RadToDegree ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) - 1 );
+
+    //initialising dummy variables
+    dummyMaxCam = maxCam[i][j];
+    dummyMaxCamPos = maxCamPos[i][j];
+    dummyChord = chord[i][j];
+
+    rungeKuttam(0, 0, 1 / resolution, 0, 0, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+
 }
 
 /*
@@ -328,9 +421,9 @@ bool getDeHallerNumber(double alpha1, double alpha2, double beta1, double beta2)
         return 0;
 }
 
-virtual double StreamSurface(double x, double y)
+double func(double x, double y) final
 {
-    return y;
+    return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
 
 };
@@ -339,8 +432,8 @@ int main()
 {
     double rTip[11][3] = {
         {0.09, 0.09, 0.089 },
-        { 0.89, 0.088, 0.087 },
-        { 0.087, 0.086, 0.084 },
+        { 0.089, 0.088, 0.087 },
+        { 0.087, 0.086, 0.081 },
         { 0.081, 0.08, 0.08 },
         { 0.08, 0.08, 0.08 },
         { 0.08, 0.08, 0.08 },
@@ -369,18 +462,21 @@ int main()
     double rHub = 0.05;
     double omega_1 = 2850;
     double omega_2 = 6800;
-    double resol = 100;
+    double resol = 200;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
     double rho_ = 1.204;
     double Pres = 103.15;
 
-    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths );
+    char fileD[] = "camberline.dat";
 
-    //test.init();
+    Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths, fileD );
+
+    test.init();
 
     //angles are not available yet, need to initialise them for every r
+    test.getFlowPaths(0);
     test.getBladeAngles(0);
 
     return 0;
@@ -388,3 +484,5 @@ int main()
 
 //plotting with gnuplot:
 //plot '<datafile.dat>' with linespoints linetype 0 linewidth 2
+//plot 'out.dat' with linespoints linetype 0 linewidth 2, 'out2.dat' with linespoints linetype 0 linewidth 2, 'out3.dat' with linespoints linetype 0 linewidth 2, 'out4.dat' with linespoints linetype 0 linewidth 2
+//compile : g++ main.cpp ODE_solver/solver1.o -o EXE
