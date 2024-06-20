@@ -192,7 +192,7 @@ void solver1::rungeKuttam(double x0, double y0, double dt, double start, double 
 	std::fill(k, k + 4, 0);
 
 	y = y - dt * sum;
-	print_data(timer, y, file_out);
+	print_data(timer, y , file_out);
 
 	timer -= dt;
 	}
@@ -214,7 +214,7 @@ void solver1::rungeKuttam(double x0, double y0, double dt, double start, double 
 	std::fill(k, k + 4, 0);
 
 	y = y + dt * sum;
-	print_data(timer, y, file_out);
+	print_data(timer, y , file_out);
 
 	timer += dt;
 	}

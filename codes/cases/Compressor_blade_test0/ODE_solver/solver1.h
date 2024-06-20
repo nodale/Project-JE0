@@ -8,6 +8,7 @@
 
 class solver1
 {
+protected:
 	double output;
 	std::ofstream file_out, file_real_out;
 	char* filename;
@@ -30,7 +31,7 @@ public:
 	static double RK4[3][4][4];
 	static double RK38rule[3][4][4];
 		
-private:
+//private:
 	virtual double func(double x, double y);
 	virtual double func_real(double x, double y);
 	

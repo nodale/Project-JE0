@@ -21,6 +21,8 @@ std::ofstream fileOut2;
 std::ofstream fileOut3;
 std::ofstream fileOut4;
 
+std::ofstream batchAnalysis[11];
+
 double VX[3];
 double tip_radi[11][3];
 double hub_radi[11][3];
@@ -81,6 +83,7 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     char camFilename[] = "camberline.dat";
     solver1::initFile(camFilename);
 
+    std::string tempName;
     for(int i = 0; i < 11; i++)
     {
         for(int j = 0; j < 4; j++)
@@ -95,7 +98,12 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
 
             chord[i][0] = c[i][0];
             chord[i][1] = c[i][1];
+
         }
+
+        //opening a file for each batchAnalysis ofstream
+        tempName = "batchData/" + std::to_string(i) + ".dat";
+        batchAnalysis[i].open( tempName);
     }
 
     hub_radi[0][0] = hub;
@@ -264,12 +272,18 @@ void init()
     double vu2_r = VX[0] * tan( meanAlpha[i][1] / RadToDegree );
     a[i] = 0.5 * ( vu1_r + vu2_r );
     b[i] = 0.5 * ( vu2_r - vu1_r );
+    
     }
+
+    //for some reasons chord[0][0] changes here
+    chord[0][0] = chord[1][0];
+    //std::cout << chord[0][0] << " " << chord[0][1] << std::endl;
     //std::cout << Pressure[10][2] << std::endl; 
 }
 
 void getFlowPaths(int i)
 {
+    
     double dr1, dr2, radius1, radius2, y;
     double tempPhi, tempVu1, tempVu2;
     dr1 = ( tip_radi[i][0] - hub_radi[i][0] ) / resolution ;
@@ -279,7 +293,7 @@ void getFlowPaths(int i)
     {
         radius1 = hub_radi[i][0] + r * dr1;
         radius2 = hub_radi[i][1] + r * dr2;
-
+        
         y = radius1 / mean_radi[i][0]; 
 
         tempVu1 = a[i] - b[i]/y;
@@ -295,8 +309,8 @@ void getFlowPaths(int i)
         tempPhi = VX[0] / ( omega2 * radius1 );  
         }
 
-        alpha[i][0][r] = atan2( tempVu1 , VX[i] ) * RadToDegree;
-        alpha[i][1][r] = atan2( tempVu2 , VX[i] ) * RadToDegree;
+        alpha[i][0][r] = atan( tempVu1 / VX[0] ) * RadToDegree;
+        alpha[i][1][r] = atan( tempVu2 / VX[0] ) * RadToDegree;
 
         beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
         beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
@@ -358,7 +372,7 @@ void getBladeAngles(int i)
 
         k1 = beta[i][0][r] - incidencePoint - dIncidence;
         k2 = beta[i][1][r] - deltaPoint;
-
+        
         /* //convergence test
         if ( k1 / 1.05 <= dummyK1 <= k1 * 1.05 && k2 / 1.05 <= dummyK2 <= k2 * 1.05 )
         {
@@ -371,22 +385,75 @@ void getBladeAngles(int i)
 //j is either one(rotor) or two(stator)
 void getCamberline(int i, int j, int r)
 {
+    double dummyR = 0.0;
     //distance to the maximum camber, dimesionless
-    maxCamPos[i][j] = 0.5;
+    maxCamPos[i][j] = 0.4 * chord[i][j];
     double theta;
 
+    if(j == 0)
+    {
     theta = beta[i][0][r] - beta[i][1][r]; 
+    }
+    if(j == 1)
+    {
+    theta = alpha[i][0][r] - alpha[i][1][r]; 
+    }
 
-    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( 1 + pow( 4 * tan( theta / RadToDegree ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) - 1 );
+    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
 
     //initialising dummy variables
     dummyMaxCam = maxCam[i][j];
     dummyMaxCamPos = maxCamPos[i][j];
-    dummyChord = chord[i][j];
+    dummyChord = chord[i][j]; 
 
-    std::cout << dummyChord << " " << chord[i][j] << " " << dummyChord << std::endl;
 
-    solver1::rungeKuttam(0.0, 0.0, 0.1 / resolution, 0.0, 1.0, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+    std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
+
+    for(double dt = 0; dt < dummyChord;)
+    {
+        dummyR = func( dt, dummyR );
+        dt += dummyChord/resolution;
+        file_out << dt << " " << dummyR << "\n";
+    }
+
+    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+
+}
+
+// j = 0 for rotor and j = 1 for stator
+void analysisCamber(int j)
+{
+    for(int i = 0; i < 11; i++)
+    {
+    maxCamPos[i][j] = 0.4 * chord[i][j];
+    double theta;
+
+    for(int r = 0; r < resolution; r++)
+    {
+    if(j == 0)
+    {
+    theta = beta[i][0][r] - beta[i][1][r]; 
+    }
+    if(j == 1)
+    {
+    theta = alpha[i][0][r] - alpha[i][1][r]; 
+    }
+
+    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+
+    if(j == 1)
+    {
+    batchAnalysis[i] << r << " " << alpha[i][j][r] << "\n";
+    }
+    if(j == 0)
+    {
+    batchAnalysis[i] << r << " " << beta[i][j][r] << "\n";
+    }
+    
+    }
+    }
+    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+
 }
 
 /*
@@ -481,10 +548,14 @@ int main()
 
     test.init();
 
-    //angles are not available yet, need to initialise them for every r
-    test.getFlowPaths(0);
-    test.getBladeAngles(0);
-    test.getCamberline(0,0,100);
+    //angles are not available yet, need to initialise them for every r and stage
+    for(int i = 0; i < 11; i++)
+    {
+    test.getFlowPaths(i);
+    }
+    //test.getBladeAngles(0);
+    //test.getCamberline(3,1,50);
+    test.analysisCamber(0);
 
     return 0;
 }
@@ -493,3 +564,6 @@ int main()
 //plot '<datafile.dat>' with linespoints linetype 0 linewidth 2
 //plot 'out.dat' with linespoints linetype 0 linewidth 2, 'out2.dat' with linespoints linetype 0 linewidth 2, 'out3.dat' with linespoints linetype 0 linewidth 2, 'out4.dat' with linespoints linetype 0 linewidth 2
 //compile : g++ main.cpp ODE_solver/solver1.o -o EXE
+//gnuplot 1:1 ratio : set size ratio -1
+//gnuplot camberline :  set size ratio -1
+//                      plot'camberline.dat' with linespoints linetype 0 linewidth 2
