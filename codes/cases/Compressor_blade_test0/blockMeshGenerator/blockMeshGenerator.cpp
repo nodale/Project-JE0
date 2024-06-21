@@ -94,12 +94,14 @@ void blockMeshGen::generateStl(int resolution)
     double tempNormal[3];
     double tempLength;
 
+    int dummyRes = resolution + 1;
+
     out << "solid Blade\n";
     for(int d = 0; d < vertices.size(); d++)
     {
         for(int l = 0; l < 2; l++)
         {
-            if( remainder( d - 50, 51) != 0 )
+            if( remainder( d - resolution, dummyRes) != 0 )
             {
                 
                 if(l == 0)

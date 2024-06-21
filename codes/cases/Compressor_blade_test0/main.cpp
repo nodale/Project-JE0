@@ -407,7 +407,7 @@ void getCamberline(int i, int j, int r)
 {
     double dummyR = 0.0;
     //distance to the maximum camber, dimesionless
-    maxCamPos[i][j] = 0.4 * chord[i][j];
+    maxCamPos[i][j] = 0.42 * chord[i][j];
     double theta;
 
     if(j == 0)
@@ -450,16 +450,25 @@ void analysisCamber(int j)
 
     //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
 
-    for(int r = 0; r < resolution; r++)
+    for(int r = 0; r <= resolution; r++)
     {
     //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
+    // if(j == 0)
+    // {
+    // theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    // }
+    // if(j == 1)
+    // {
+    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    // }
+
     if(j == 0)
     {
-    theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    theta = beta[i][0][r] - beta[i][1][r]; 
     }
     if(j == 1)
     {
-    theta = cos(alpha[i][1][r]/RadToDegree) / cos(alpha[i][0][r]/RadToDegree); 
+    theta = alpha[i][1][r] - alpha[i+1][0][r]; 
     }
 
     // maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
@@ -494,7 +503,7 @@ void generateBlade(int i, int j)
 
         double dummyR = 0.0;
         //distance to the maximum camber, dimesionless
-        maxCamPos[i][j] = 0.4 * chord[i][j];
+        maxCamPos[i][j] = 0.42 * chord[i][j];
         double theta;
 
         if(j == 0)
@@ -503,13 +512,15 @@ void generateBlade(int i, int j)
         }
         if(j == 1)
         {
-        theta = alpha[i][0][r] - alpha[i][1][r]; 
+        theta = alpha[i][1][r] - alpha[i+1][0][r]; 
         }
 
         maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
 
         //initialising dummy variables
-        dummyMaxCam = maxCam[i][j];
+        for(int t = -1; t < 2;)
+        {
+        dummyMaxCam = maxCam[i][j] + t * 0.05 * chord[i][j];
         dummyMaxCamPos = maxCamPos[i][j];
         dummyChord = chord[i][j]; 
 
@@ -526,6 +537,8 @@ void generateBlade(int i, int j)
 
             std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             count += 1;
+        }
+        t += 2;
         }
     }
 
@@ -617,8 +630,8 @@ int main()
         { 0.015 , 0.015 },
     };
     double rHub = 0.05;
-    double omega_1 = 3700;
-    double omega_2 = 6850;
+    double omega_1 = 6750;
+    double omega_2 = 9850;
     double resol = 50;
     double v1 = 69.4377418988;
     double v2 =  v1;
@@ -636,7 +649,7 @@ int main()
     test.getFlowPaths(i);
     }
     //test.getBladeAngles(0,0);
-    test.generateBlade(0,0);
+    test.generateBlade(10,1);
     //test.getCamberline(3,1,50);
     //test.analysisCamber(1);
 
