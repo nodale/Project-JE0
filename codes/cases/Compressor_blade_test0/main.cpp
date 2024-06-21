@@ -482,10 +482,10 @@ void analysisCamber(int j)
 
 void generateBlade(int i, int j)
 {
-    double dr = 0.5 * ( tip_radi[i][j] - hub_radi[i][j] );
+    double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
     double radius;
 
-    char filename[] = "blockMeshDict";
+    char filename[] = "blade.stl"; //for blockMesh : blockMeshDict
     blockMeshGen::init(filename);
 
     for(int r = 0; r <= resolution; r++)
@@ -517,19 +517,25 @@ void generateBlade(int i, int j)
         //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
 
         int count = 0;
-        for(double dt = 0; dt < dummyChord;)
+        for(double dt = 0; dt <= dummyChord;)
         {
             dummyR = func( dt, dummyR );
             dt += dummyChord/resolution;
 
-            blockMeshGen::collectVertices(dt, dummyR, r);
+            blockMeshGen::collectVertices(dt, dummyR, radius);
 
-            std::cout << "progress : vertex number " << count << " out of " << resolution << std::endl; 
+            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             count += 1;
         }
     }
 
-    blockMeshGen::generateVertices();        
+    blockMeshGen::generateStl(resolution);
+    // blockMeshGen::generateVertices();  
+    // blockMeshGen::generateEdges();    
+    // blockMeshGen::generateBlocks();
+    // blockMeshGen::generateBoundaries(); 
+
+    std::cout << "mesh generation is done\n";
 }
 
 /*
@@ -613,7 +619,7 @@ int main()
     double rHub = 0.05;
     double omega_1 = 3700;
     double omega_2 = 6850;
-    double resol = 100;
+    double resol = 50;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;

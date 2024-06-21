@@ -1,6 +1,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
 class blockMeshGen
 {
@@ -10,18 +11,16 @@ std::vector<std::vector<double>> vertices;
 
 public:
 
-//everything must be executed in order
 void init(char* target);
-
 void collectVertices(double x, double y, double r);
-
+//everything must be executed in order, only for blockMesh
 void generateVertices();
-
 void generateEdges();
-
 void generateBlocks();
-
 void generateBoundaries();
+
+//generate an stl file
+void generateStl(int resolution);
 
 private:
 
