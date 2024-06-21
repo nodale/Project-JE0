@@ -4,8 +4,10 @@
 #include <cmath>
 #include <fstream>
 #include <ratio>
+#include <thread>
 #include <vector>
 #include "ODE_solver/solver1.h"
+#include "blockMeshGenerator/blockMeshGenerator.h"
 
 #define e 2.718281828459045
 #define PI 3.14159265
@@ -13,7 +15,7 @@
 #define Cp 1004.5
 #define gamma 1.4
 
-class Blade : public solver1
+class Blade : public solver1, public blockMeshGen
 {
 
 std::ofstream fileOut;
@@ -315,14 +317,14 @@ void getFlowPaths(int i)
         beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
         beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
 
-        printOut(fileOut, r, alpha[i][0][r]); 
-        printOut(fileOut2, r, alpha[i][1][r]);
-        printOut(fileOut3, r, beta[i][0][r]);
-        printOut(fileOut4, r, beta[i][1][r]);       
+        //printOut(fileOut, r, alpha[i][0][r]); 
+        //printOut(fileOut2, r, alpha[i][1][r]);
+        //printOut(fileOut3, r, beta[i][0][r]);
+        //printOut(fileOut4, r, beta[i][1][r]);       
     }
 }
 
-void getBladeAngles(int i)
+void getBladeAngles(int i, int j)
 {
     double dr1, dr2, radius1, radius2, E, alphaPoint;
     double theta, k1, k2, dummyK1, dummyK2, delta, dIncidence, incidencePoint, deltaPoint, Kti, Ktdelta;
@@ -334,14 +336,14 @@ void getBladeAngles(int i)
     //chosen incidence angle
     double incidence = 0;
     //chosen stagger angle
-    double stagger = 15;
+    double stagger = 35;
     double Ksh = 1.0;
     double tb = 0.1 * chord[i][0];
     //the distance to maximum thickness, might need to change it later
     double distToMax = 0.5;
     bool stop = 0;
-
-    //for the rotor blades
+    int correctionVar = 1;
+    //everything is positive, need to readjust them again later
     for(int r = 0; r <= resolution; r++)
     {
         stop = 0;
@@ -353,25 +355,43 @@ void getBladeAngles(int i)
         dummyK2 = k2;
 
         //need a loop for the following, use the stop boolean and if statement commented below
+        if(j == 0)
+        {
         theta = beta[i][0][r] - beta[i][1][r]; 
+        }
+        if(j == 1)
+        {
+        theta = alpha[i][1][r] - alpha[i+1][0][r]; 
+        }
+        if(theta < 0)
+        {
+        correctionVar = -1;
+        }
+        if(theta >= 0)
+        {
+        correctionVar = 1;
+        }
+
         E = 0.65 - 0.002 * theta;
         q = 0.28 / ( 0.1 + pow( tb / chord[i][0] , 0.3 ) );
         Kti = pow( 10 * tb / chord[i][0] , q );
-        alphaPoint = ( 3.6 * Ksh * Kti + 0.3532 * theta * pow( distToMax / chord[i][0] , 0.25 ) ) * pow( theta , e );
+        alphaPoint = correctionVar * ( 3.6 * Ksh * Kti + 0.3532 * theta * pow( distToMax / chord[i][0] , 0.25 ) ) * pow( correctionVar * theta , E );
         incidencePoint = alphaPoint + stagger - k1;
 
         delta0Point = 0.01 * solidity[i] * beta[i][0][r] + ( 0.74 * pow( solidity[i] , 1.9 ) + 3 * solidity[i] ) * pow( fabs( beta[i][0][r] ) / 90 , 1.67 + 1.09 * solidity[i] );
         tempX = beta[i][0][r] / 100;
-        m10 = 0.17 - 0.0333 * tempX + 0.333 * pow( tempX , 2 ) ;
+        m10 = 0.17 - 0.0333 * tempX + 0.333 * pow( tempX , 2 );
         tempB = 0.9625 - 0.17 * tempX - 0.85 * pow( tempX , 3 );
         m = m10 / pow( solidity[i] , tempB );
         Ktdelta = 6.25 * ( tb / chord[i][0] ) + 37.5 * pow( tb / chord[i][0] , 2 );
         deltaPoint = Ksh * Ktdelta * delta0Point + m * theta;
 
         dIncidence = incidence - incidencePoint;
-
+        //TODO fix incidencePoint
         k1 = beta[i][0][r] - incidencePoint - dIncidence;
         k2 = beta[i][1][r] - deltaPoint;
+        
+        std::cout << k1 << " " << alphaPoint << std::endl;
         
         /* //convergence test
         if ( k1 / 1.05 <= dummyK1 <= k1 * 1.05 && k2 / 1.05 <= dummyK2 <= k2 * 1.05 )
@@ -407,7 +427,7 @@ void getCamberline(int i, int j, int r)
     dummyChord = chord[i][j]; 
 
 
-    std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
+    //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
 
     for(double dt = 0; dt < dummyChord;)
     {
@@ -425,35 +445,91 @@ void analysisCamber(int j)
 {
     for(int i = 0; i < 11; i++)
     {
-    maxCamPos[i][j] = 0.4 * chord[i][j];
-    double theta;
+    //maxCamPos[i][j] = 0.4 * chord[i][j];
+    double theta, yValue;
+
+    //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
 
     for(int r = 0; r < resolution; r++)
     {
+    //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
     if(j == 0)
     {
-    theta = beta[i][0][r] - beta[i][1][r]; 
+    theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
     }
     if(j == 1)
     {
-    theta = alpha[i][0][r] - alpha[i][1][r]; 
+    theta = cos(alpha[i][1][r]/RadToDegree) / cos(alpha[i][0][r]/RadToDegree); 
     }
 
-    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+    // maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
 
-    if(j == 1)
-    {
-    batchAnalysis[i] << r << " " << alpha[i][j][r] << "\n";
-    }
-    if(j == 0)
-    {
-    batchAnalysis[i] << r << " " << beta[i][j][r] << "\n";
-    }
+    // if(j == 1)
+    // {
+    // batchAnalysis[i] << r << " " << alpha[i][j][r] << "\n";
+    // }
+    // if(j == 0)
+    // {
+    // batchAnalysis[i] << r << " " << beta[i][j][r] << "\n";
+    // }
+    batchAnalysis[i] << r << " " <<  theta << "\n";
     
     }
     }
     //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
 
+}
+
+void generateBlade(int i, int j)
+{
+    double dr = 0.5 * ( tip_radi[i][j] - hub_radi[i][j] );
+    double radius;
+
+    char filename[] = "blockMeshDict";
+    blockMeshGen::init(filename);
+
+    for(int r = 0; r <= resolution; r++)
+    {
+        radius = dr * r + hub_radi[i][j];
+
+        double dummyR = 0.0;
+        //distance to the maximum camber, dimesionless
+        maxCamPos[i][j] = 0.4 * chord[i][j];
+        double theta;
+
+        if(j == 0)
+        {
+        theta = beta[i][0][r] - beta[i][1][r]; 
+        }
+        if(j == 1)
+        {
+        theta = alpha[i][0][r] - alpha[i][1][r]; 
+        }
+
+        maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+
+        //initialising dummy variables
+        dummyMaxCam = maxCam[i][j];
+        dummyMaxCamPos = maxCamPos[i][j];
+        dummyChord = chord[i][j]; 
+
+
+        //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
+
+        int count = 0;
+        for(double dt = 0; dt < dummyChord;)
+        {
+            dummyR = func( dt, dummyR );
+            dt += dummyChord/resolution;
+
+            blockMeshGen::collectVertices(dt, dummyR, r);
+
+            std::cout << "progress : vertex number " << count << " out of " << resolution << std::endl; 
+            count += 1;
+        }
+    }
+
+    blockMeshGen::generateVertices();        
 }
 
 /*
@@ -535,9 +611,9 @@ int main()
         { 0.015 , 0.015 },
     };
     double rHub = 0.05;
-    double omega_1 = 2850;
-    double omega_2 = 6800;
-    double resol = 200;
+    double omega_1 = 3700;
+    double omega_2 = 6850;
+    double resol = 100;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
@@ -553,9 +629,10 @@ int main()
     {
     test.getFlowPaths(i);
     }
-    //test.getBladeAngles(0);
+    //test.getBladeAngles(0,0);
+    test.generateBlade(0,0);
     //test.getCamberline(3,1,50);
-    test.analysisCamber(0);
+    //test.analysisCamber(1);
 
     return 0;
 }
@@ -567,3 +644,4 @@ int main()
 //gnuplot 1:1 ratio : set size ratio -1
 //gnuplot camberline :  set size ratio -1
 //                      plot'camberline.dat' with linespoints linetype 0 linewidth 2
+//g++ ODE_solver/solver1.cpp blockMeshGenerator/blockMeshGenerator.cpp main.cpp -o EXE && ./EXE
