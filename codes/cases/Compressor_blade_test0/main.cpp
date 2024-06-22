@@ -412,11 +412,11 @@ void getCamberline(int i, int j, int r)
 
     if(j == 0)
     {
-    theta = beta[i][0][r] - beta[i][1][r]; 
+    theta = fabs(beta[i][0][r]) - fabs(beta[i][1][r]); 
     }
     if(j == 1)
     {
-    theta = alpha[i][0][r] - alpha[i][1][r]; 
+    theta = fabs(alpha[i][0][r]) - fabs(alpha[i][1][r]); 
     }
 
     maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
@@ -445,7 +445,7 @@ void analysisCamber(int j)
 {
     for(int i = 0; i < 11; i++)
     {
-    //maxCamPos[i][j] = 0.4 * chord[i][j];
+    maxCamPos[i][j] = 0.3 * chord[i][j];
     double theta, yValue;
 
     //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
@@ -464,14 +464,14 @@ void analysisCamber(int j)
 
     if(j == 0)
     {
-    theta = beta[i][0][r] - beta[i][1][r]; 
+    theta = fabs(beta[i][0][r]) - fabs(beta[i][1][r]); 
     }
     if(j == 1)
     {
-    theta = alpha[i][1][r] - alpha[i+1][0][r]; 
+    theta = fabs(alpha[i][0][r]) - fabs(alpha[i][1][r]); 
     }
 
-    // maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
 
     // if(j == 1)
     // {
@@ -502,7 +502,7 @@ void generateBlade(int i, int j)
         radius = dr * r + hub_radi[i][j];
 
         //distance to the maximum camber, dimesionless
-        maxCamPos[i][j] = 0.5 * chord[i][j];
+        maxCamPos[i][j] = 0.30 * chord[i][j];
         double theta;
 
         if(j == 0)
@@ -630,7 +630,8 @@ int main()
     double rHub = 0.05;
     double omega_1 = 3750;
     double omega_2 = 6850;
-    double resol = 50;
+    //resolution only works best with X50; where X is any integer
+    double resol = 250;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
@@ -640,16 +641,16 @@ int main()
     Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths);
 
     test.init();
-
+    
     //angles are not available yet, need to initialise them for every r and stage
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
     }
     //test.getBladeAngles(0,0);
-    test.generateBlade(10,1);
+    //test.generateBlade(10,1);
     //test.getCamberline(3,1,50);
-    //test.analysisCamber(1);
+    test.analysisCamber(1);
 
     return 0;
 }

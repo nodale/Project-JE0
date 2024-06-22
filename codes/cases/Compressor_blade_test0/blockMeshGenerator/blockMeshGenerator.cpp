@@ -145,10 +145,9 @@ void blockMeshGen::generateStl(int resolution)
                     }
 
                 out << "endloop\n" << "endfacet\n";
-                
+
                 tempValue.clear();
             }
-            
         }
 
     }
