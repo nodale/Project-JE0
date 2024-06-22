@@ -407,7 +407,7 @@ void getCamberline(int i, int j, int r)
 {
     double dummyR = 0.0;
     //distance to the maximum camber, dimesionless
-    maxCamPos[i][j] = 0.42 * chord[i][j];
+    maxCamPos[i][j] = 0.25 * chord[i][j];
     double theta;
 
     if(j == 0)
@@ -501,9 +501,8 @@ void generateBlade(int i, int j)
     {
         radius = dr * r + hub_radi[i][j];
 
-        double dummyR = 0.0;
         //distance to the maximum camber, dimesionless
-        maxCamPos[i][j] = 0.42 * chord[i][j];
+        maxCamPos[i][j] = 0.5 * chord[i][j];
         double theta;
 
         if(j == 0)
@@ -515,33 +514,32 @@ void generateBlade(int i, int j)
         theta = alpha[i][1][r] - alpha[i+1][0][r]; 
         }
 
-        maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
-
+        maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt(  1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) - 1 );
+        std::cout << maxCam[i][j] << "\n";
         //initialising dummy variables
         for(int t = -1; t < 2;)
         {
-        dummyMaxCam = maxCam[i][j] + t * 0.05 * chord[i][j];
+        dummyMaxCam = maxCam[i][j] + t * 0.001;
         dummyMaxCamPos = maxCamPos[i][j];
         dummyChord = chord[i][j]; 
 
 
         //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
-
+        double dummyR;
         int count = 0;
         for(double dt = 0; dt <= dummyChord;)
         {
             dummyR = func( dt, dummyR );
-            dt += dummyChord/resolution;
 
             blockMeshGen::collectVertices(dt, dummyR, radius);
 
             std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            dt += dummyChord/resolution;
             count += 1;
         }
         t += 2;
         }
     }
-
     blockMeshGen::generateStl(resolution);
     // blockMeshGen::generateVertices();  
     // blockMeshGen::generateEdges();    
@@ -630,8 +628,8 @@ int main()
         { 0.015 , 0.015 },
     };
     double rHub = 0.05;
-    double omega_1 = 6750;
-    double omega_2 = 9850;
+    double omega_1 = 3750;
+    double omega_2 = 6850;
     double resol = 50;
     double v1 = 69.4377418988;
     double v2 =  v1;
