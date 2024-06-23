@@ -16,8 +16,7 @@
 #define gamma 1.4
 
 //TODO
-//adapt an aerofoil profile (NACA 6-Series) to the flow paths, probably match the corrected discharge angle with the aerofoil
-//also find the required lift coefficient, page 346 or 36 "analysis repeating stage"
+//find tengential velocity 2 based on the energy used
 
 class Blade : public solver1, public blockMeshGen
 {
@@ -202,7 +201,12 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
     solidity[0] = ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] );
 
     double vu1_r = VX[0] * tan( meanAlpha[0][0] / RadToDegree );
-    double vu2_r = VX[0] * tan( meanAlpha[0][1] / RadToDegree );
+
+    //1st approach
+    //double vu2_r = VX[0] * tan( meanAlpha[0][1] / RadToDegree );
+
+    //2nd approach
+    double vu2_r = ( work[0] + omega1 * vu1_r * mean_radi[0][0] ) / ( omega1 * mean_radi[0][0] );
     a[0] = 0.5 * ( vu1_r + vu2_r );
     b[0] = 0.5 * ( vu2_r - vu1_r );
 
@@ -296,10 +300,23 @@ void init()
     solidity[i] = ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] );
 
     double vu1_r = VX[0] * tan( meanAlpha[i][0] / RadToDegree );
-    double vu2_r = VX[0] * tan( meanAlpha[i][1] / RadToDegree );
+    // approach 1
+    //double vu2_r = VX[0] * tan( meanAlpha[i][1] / RadToDegree );
+    
+    //approach 2
+    double vu2_r;
+    if(i < 3)
+    {
+        vu2_r = ( work[i] + omega1 * vu1_r * mean_radi[i][0] ) / ( omega1 * mean_radi[i][0] );
+    }
+    if(i >= 3)
+    {
+        vu2_r = ( work[i] + omega2 * vu1_r * mean_radi[i][0] ) / ( omega2 * mean_radi[i][0] );
+    }
+
+    
     a[i] = 0.5 * ( vu1_r + vu2_r );
     b[i] = 0.5 * ( vu2_r - vu1_r );
-    
     }
     
     //for some reasons chord[0][0] changes here
@@ -352,7 +369,7 @@ void getFlowPaths(int i)
 
         beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
         beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
-        
+
         //printOut(fileOut, r, alpha[i][0][r]); 
         //printOut(fileOut2, r, alpha[i][1][r]);
         //printOut(fileOut3, r, beta[i][0][r]);
@@ -521,14 +538,14 @@ void analysisCamber(int j)
     for(int r = 0; r <= resolution; r++)
     {
     //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
-    // if(j == 0)
-    // {
-    // theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
-    // }
-    // if(j == 1)
-    // {
-    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
-    // }
+    if(j == 0)
+    {
+    theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    }
+    if(j == 1)
+    {
+    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    }
 
     // if(j == 0)
     // {
@@ -552,20 +569,20 @@ void analysisCamber(int j)
     
 
     //get loss coefficients, not extremely accurate but it's alright
-    lossCoefficient[i][0][r] = 0.014 * solidity[i] / cos( beta[i][1][r] / RadToDegree );
-    lossCoefficient[i][1][r] = 0.014 * solidity[i] / cos( alpha[i+1][0][r] / RadToDegree );
+    // lossCoefficient[i][0][r] = 0.014 * solidity[i] / cos( beta[i][1][r] / RadToDegree );
+    // lossCoefficient[i][1][r] = 0.014 * solidity[i] / cos( alpha[i+1][0][r] / RadToDegree );
     
-    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
-    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+    // Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    // Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
 
-    pressureLoss[i][0][r] = 0.5 * rho[i][2] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
-    pressureLoss[i][1][r] = 0.5 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+    // //pressure loss is in Kpascal
+    // pressureLoss[i][0][r] = 0.5 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    // pressureLoss[i][1][r] = 0.5 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
 
-    liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
-    liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
+    // liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 0 * 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
+    // liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 0 * 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
 
-    batchAnalysis[i] << r << " " <<  liftCoefficient[i][j][r] << "\n";
-
+    batchAnalysis[i] << r << " " <<  theta << "\n";
 
     //efficiency analysis
     //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
@@ -743,8 +760,8 @@ int main()
         { 0.015 , 0.015 },
     };
     double rHub = 0.05;
-    double omega_1 = 3750;
-    double omega_2 = 6850;
+    double omega_1 = 2250;
+    double omega_2 = 5850;
     //resolution only works best with X50; where X is any integer
     double resol = 250;
     double v1 = 69.4377418988;
@@ -755,7 +772,7 @@ int main()
 
     Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths);
 
-    //test.init();
+    test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
     for(int i = 0; i < 11; i++)
@@ -769,6 +786,7 @@ int main()
     test.analysisCamber(1);
     //test.clear();
     
+    //TODO check De Haller's number
 
     return 0;
 }
