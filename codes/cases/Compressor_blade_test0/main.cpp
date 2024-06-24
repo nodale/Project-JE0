@@ -57,6 +57,7 @@ double maxCam[11][2];
 double maxCamPos[11][2];
 std::vector<double> liftCoefficient[11][2];
 std::vector<double> rotateAngle[11][2];
+std::vector<double> incidenceAngle[11][2];
 std::vector<double> AoA[11][2];
 //dummy variables
 double dummyMaxCam, dummyMaxCamPos, dummyChord, dummyLiftCoefficient;
@@ -129,7 +130,8 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
             pressureLoss[i][j].reserve(resolution);
             dischargeAngle[i][j].reserve(resolution);
             rotateAngle[i][j].reserve(resolution);
-
+            incidenceAngle[i][j].reserve(resolution);
+            AoA[i][j].reserve(resolution);
             //this doesn't work for some reasons
             //efficiency[i][j] = 0.9;
             
@@ -140,6 +142,7 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
         batchAnalysis[i].open( tempName);
     }
     
+    meanAlpha[11][0] = initial_alpha1[11];
 
     hub_radi[0][0] = hub;
     mean_radi[0][0] = 0.5 * ( tip_radi[0][0] + hub_radi[0][0] );
@@ -379,6 +382,8 @@ void getFlowPaths(int i)
         beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
         beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
 
+        alpha[11][0][r] = meanAlpha[11][0];
+
         //printOut(fileOut, r, alpha[i][0][r]); 
         //printOut(fileOut2, r, alpha[i][1][r]);
         //printOut(fileOut3, r, beta[i][0][r]);
@@ -437,14 +442,14 @@ void analysisCamber(int j)
     for(int r = 0; r <= resolution; r++)
     {
     // // //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
-    //if(j == 0)
-    //{
-    //theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
-    //}
-    // if(j == 0)
-    // {
-    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
-    // }
+    if(j == 0)
+    {
+    theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    }
+    if(j == 1)
+    {
+    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    }
 
     // if(j == 0)s
     // {
@@ -509,19 +514,21 @@ void getLeadingTrailingAngles(int j)
             discharge1 = func( dt * ( resolution - 2 ) , discharge1 );
             discharge2 = func( dt * ( resolution - 1 ) , discharge2 );
 
-            dischargeAngle[i][j][r] = atan2( discharge2 - discharge1 , dt ) * RadToDegree;
+            dischargeAngle[i][j][r] = atan2(  discharge2 - discharge1  , dt ) * RadToDegree;
             
             if( j == 0)
             {
             rotateAngle[i][j][r] = beta[i][1][r] - dischargeAngle[i][j][r];
+            incidenceAngle[i][j][r] = beta[i][0][r] - rotateAngle[i][j][r];
+            //batchAnalysis[i] << beta[i][0][r] << " " <<  rotateAngle[i][j][r] << "\n";
             }
             if( j == 1)
             {
             rotateAngle[i][j][r] = alpha[i+1][0][r] - dischargeAngle[i][j][r];
+            incidenceAngle[i][j][r] = alpha[i][1][r] - rotateAngle[i][j][r];
+            //batchAnalysis[i] << r << " " <<  incidenceAngle[i][j][r] << "\n";
             }
-
-            batchAnalysis[i] << r << " " <<  rotateAngle[i][j][r] << "\n";
-
+            //batchAnalysis[i] << r << " " <<  AoA[i][j][r] << "\n";
         }
     }
 }
@@ -536,7 +543,7 @@ void getBladeAngles(int i, int j)
     dr2 = ( tip_radi[i][1] - hub_radi[i][1] ) / resolution ;
 
     //chosen incidence angle
-    double incidence = 6.0;
+    double incidence;
     double stagger;
     double Ksh = 1.0;
     double tb = 0.1 * chord[i][0];
@@ -548,6 +555,7 @@ void getBladeAngles(int i, int j)
     for(int r = 0; r <= resolution; r++)
     {
         //stagger angle, currently it is the difference between inlet and outlet angle
+        incidence = incidenceAngle[i][j][r];
         if(j == 0)
         {
             stagger = fabs( beta[i][1][r] - beta[i][0][r] );
@@ -566,7 +574,7 @@ void getBladeAngles(int i, int j)
         
 
         //need a loop for the following, use the stop boolean and if statement commented below
-        while(stop == 0)
+        for(int count = 0; count <= resolution; count++)
         {
             dummyK1 = k1;
             dummyK2 = k2;
@@ -619,21 +627,29 @@ void getBladeAngles(int i, int j)
             //std::cout << k2 << " " << k2 << std::endl;
 
             //convergence test
-            if ( dummyK1 == k1 && k2 == dummyK2 )
+            //if ( dummyK1 == k1 && k2 == dummyK2 )
+            if(count == resolution)
             {
                 if(j == 0)
                 {
+                AoA[i][j][r] = k1 - beta[i][0][r];
+                
                 std::cout << "inlet :  "<< k1 << " " << fabs(beta[i][0][r]) << "   outlet :  " << k2 << " " << fabs(beta[i][1][r]) << "\n";
                 }
                 if(j == 1)
                 {
+                AoA[i][j][r] = k2 - alpha[i][1][r];
+
                 std::cout << "inlet :  "<< k1 << " " << fabs(alpha[i][1][r]) << "   outlet :  " << k2 << " " << fabs(alpha[i+1][0][r]) << "\n";
                 }
+                //batchAnalysis[i] << r << " " <<  AoA[i][j][r] << "\n";
                 stop = 1;
             }
         }
 
     }
+
+    drawFlowPath();
 }
 
 
@@ -749,6 +765,50 @@ void drawShape()
     }
 }
 
+void drawFlowPath()
+{
+    double length = 0.0;
+    double previousVal = 0.0;
+    for(int i = 0; i < 11; i++)
+    {
+        for(int r = 0; r <= resolution; r++)
+        {
+            batchAnalysis[i] << length << " " << previousVal + beta[i][0][r] - beta[i][0][0] << "\n";
+            length += 1.0;
+        }
+
+        previousVal = previousVal + beta[i][0][resolution] - beta[i][0][0];
+        batchAnalysis[i] << " " << "\n";
+
+        for(int r = 0; r <= resolution; r++)
+        {
+            batchAnalysis[i] << length << " " << previousVal + beta[i][1][r] - beta[i][1][0] << "\n";
+            length += 1.0;
+        }
+
+        previousVal = previousVal + beta[i][1][resolution] - beta[i][1][0];
+        batchAnalysis[i] << " " << "\n";
+
+        for(int r = 0; r <= resolution; r++)
+        {
+            batchAnalysis[i] << length << " " << previousVal + alpha[i][1][r] - alpha[i][1][0] << "\n";
+            length += 1.0;
+        }
+
+        previousVal = previousVal + alpha[i][1][resolution] - alpha[i][1][0];
+        batchAnalysis[i] << " " << "\n";
+
+        for(int r = 0; r <= resolution; r++)
+        {
+            batchAnalysis[i] << length << " " << previousVal + alpha[i+1][0][r] - alpha[i+1][0][0] << "\n";
+            length += 1.0;
+        }
+
+        previousVal = previousVal + alpha[i+1][0][resolution] - alpha[i+1][0][0];
+        batchAnalysis[i] << " " << "\n";
+    }
+}
+
 void printOut( std::ofstream &out, double value1, double value2)
 {
 
@@ -814,8 +874,8 @@ int main()
         { 0.08, 0.08, 0.08 },
         { 0.08, 0.08, 0.08 },
     };
-    double delta_P[11] = { 1.15, 1.175, 1.2, 1.225, 1.25, 1.275, 1.3, 1.325, 1.325, 1.325, 1.325 };
-    double init_alpha1[12] = { -46, -48, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    double delta_P[11] = { 1.075, 1.1, 1.2, 1.225, 1.25, 1.275, 1.3, 1.325, 1.325, 1.325, 1.325 };
+    double init_alpha1[12] = { -50, -48, -46, 0, 30, 42, 48, 58, 58, 62, 68, 70 };
     double degOfReaction[11] = { 0.5, 0.5, 0.5, 0.6, 0.6, 0.6,0.6, 0.6, 0.6, 0.6, 0.6 };
     double chordLengths[11][2] = {
         { 0.015 , 0.015 },
@@ -831,8 +891,8 @@ int main()
         { 0.015 , 0.015 },
     };
     double rHub = 0.05;
-    double omega_1 = 3250;
-    double omega_2 = 5600;
+    double omega_1 = 3250; //3250
+    double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
     double resol = 250;
     double v1 = 69.4377418988;
@@ -846,13 +906,17 @@ int main()
     test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
+    int f = 1;
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
     }
-    test.analysisCamber(1);
-    test.getLeadingTrailingAngles(1);
-    //test.getBladeAngles(10,1);
+    test.analysisCamber(f);
+    test.getLeadingTrailingAngles(f);
+    for(int i = 0; i < 11; i++)
+    {
+    test.getBladeAngles(i,f);
+    }
     //test.generateBlade(0,0);
     //test.getCamberline(3,1,50);
     //test.clear();
