@@ -486,7 +486,7 @@ void analysisCamber(int j)
     liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
 
-    //batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
+    batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
 
     //efficiency analysis
     //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
@@ -649,7 +649,7 @@ void getBladeAngles(int i, int j)
 
     }
 
-    drawFlowPath();
+    //drawFlowPath();
 }
 
 
@@ -667,7 +667,8 @@ void generateBlade(int i, int j)
         radius = dr * r + hub_radi[i][j];
 
         //distance to the maximum camber, dimesionless
-        maxCamPos[i][j] = 0.50 * chord[i][j];
+        dummyChord = chord[i][j]; 
+        maxCamPos[i][j] = 0.50 * dummyChord;
         double theta;
 
         if(j == 0)
@@ -679,26 +680,26 @@ void generateBlade(int i, int j)
         theta = alpha[i][1][r] - alpha[i+1][0][r]; 
         }
 
-        maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt(  1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) - 1 );
-        std::cout << maxCam[i][j] << "\n";
+        maxCam[i][j] = dummyChord / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt(  1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / dummyChord - pow( maxCamPos[i][j] / dummyChord - 3.0 / 16.0 , 2 ) ) ) - 1 );
+        //std::cout << maxCam[i][j] << "\n";
         //initialising dummy variables
         //for(int t = -1; t < 2;)
         //{
+        
         dummyMaxCam = maxCam[i][j];
         dummyMaxCamPos = maxCamPos[i][j];
-        dummyChord = chord[i][j]; 
-
-
+        
         //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
-        double dummyR;
+        double dummyR, dummyDist;
         int count = 0;
         for(double dt = 0; dt <= dummyChord;)
         {
             dummyR = func( dt, dummyR );
+            dummyDist = dt - 0.5 * dummyChord;
+            transformAngle(rotateAngle[i][j][r], dummyDist, dummyR);//0.5 * dummyChord - dummyDist
+            blockMeshGen::collectVertices(0.5 * dummyChord - dummyDist, dummyR, radius);
 
-            blockMeshGen::collectVertices(dt, dummyR, radius);
-
-            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             dt += dummyChord/resolution;
             count += 1;
         }
@@ -835,6 +836,12 @@ bool getDeHallerNumber(double alpha1, double alpha2, double beta1, double beta2)
         return 0;
 }
 
+void transformAngle(double angle, double &x, double &y)
+{
+        x = cos( angle / RadToDegree ) * x;
+        y = tan( angle / RadToDegree ) * x;
+}
+
 //parabolic camberline
 // double func(double x, double y) override
 // {
@@ -917,7 +924,7 @@ int main()
     {
     test.getBladeAngles(i,f);
     }
-    //test.generateBlade(0,0);
+    test.generateBlade(1,1);
     //test.getCamberline(3,1,50);
     //test.clear();
     
