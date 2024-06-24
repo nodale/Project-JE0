@@ -56,6 +56,8 @@ double chord[11][2];
 double maxCam[11][2];
 double maxCamPos[11][2];
 std::vector<double> liftCoefficient[11][2];
+std::vector<double> rotateAngle[11][2];
+std::vector<double> AoA[11][2];
 //dummy variables
 double dummyMaxCam, dummyMaxCamPos, dummyChord, dummyLiftCoefficient;
 //work-done factor
@@ -80,8 +82,10 @@ double Ws[11];
 double efficiency[11][2];
 std::vector<double> lossCoefficient[11][2];
 std::vector<double> pressureLoss[11][2];
+std::vector<double> dischargeAngle[11][2];
 
 double solidity[11];
+
 
 double h, g;
 
@@ -123,6 +127,8 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
             liftCoefficient[i][j].reserve(resolution);
             Mach[i][j].reserve(resolution);
             pressureLoss[i][j].reserve(resolution);
+            dischargeAngle[i][j].reserve(resolution);
+            rotateAngle[i][j].reserve(resolution);
 
             //this doesn't work for some reasons
             //efficiency[i][j] = 0.9;
@@ -380,6 +386,146 @@ void getFlowPaths(int i)
     }
 }
 
+//j is either one(rotor) or two(stator)
+void getCamberline(int i, int j, int r)
+{
+    double dummyR = 0.0;
+    //distance to the maximum camber, dimesionless
+    maxCamPos[i][j] = 0.5 * chord[i][j];
+    double theta;
+
+    if(j == 0)
+    {
+    theta = beta[i][0][r] - beta[i][1][r]; 
+    }
+    if(j == 1)
+    {
+    theta = alpha[i][0][r] - alpha[i][1][r]; 
+    }
+
+    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+
+    //initialising dummy variables
+    dummyMaxCam = maxCam[i][j];
+    dummyMaxCamPos = maxCamPos[i][j];
+    dummyChord = chord[i][j]; 
+
+
+    //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
+
+    for(double dt = 0; dt < dummyChord;)
+    {
+        dummyR = func( dt, dummyR );
+        dt += dummyChord/resolution;
+        file_out << dt << " " << dummyR << "\n";
+    }
+
+    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+
+}
+
+// j = 0 for rotor and j = 1 for stator, can be used for any analysis
+void analysisCamber(int j)
+{
+    for(int i = 0; i < 11; i++)
+    {
+    maxCamPos[i][j] = 0.5 * chord[i][j];
+    double theta, yValue;
+
+    //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
+
+    for(int r = 0; r <= resolution; r++)
+    {
+    // // //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
+    //if(j == 0)
+    //{
+    //theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    //}
+    // if(j == 0)
+    // {
+    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    // }
+
+    // if(j == 0)s
+    // {
+    // theta = beta[i][0][r] - beta[i][1][r]; 
+    // }
+    // if(j == 1)
+    // {
+    // theta = alpha[i][1][r] - alpha[i+1][0][r]; 
+    // }
+
+    //maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
+
+    // if(j == 1)
+    // {
+    // batchAnalysis[i] << r << " " << alpha[i][j][r] << "\n";
+    // }
+    // if(j == 0)
+    // {
+    // batchAnalysis[i] << r << " " << beta[i][j][r] << "\n";
+    // }
+    
+
+    //get loss coefficients, not extremely accurate but it's alright
+    lossCoefficient[i][0][r] = 0.014 * solidity[i] / cos( beta[i][1][r] / RadToDegree );
+    lossCoefficient[i][1][r] = 0.014 * solidity[i] / cos( alpha[i+1][0][r] / RadToDegree );
+    
+    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+    //pressure loss is in Kpascal
+    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+    liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
+    liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
+
+    //batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
+
+    //efficiency analysis
+    //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
+    //batchAnalysis[i] << r << " " <<  dummyEfficiency << "\n";
+    }
+    }
+    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
+
+    drawShape();
+
+}
+
+void getLeadingTrailingAngles(int j)
+{
+    double dt, discharge1, discharge2, dummyDischargeAngle, dummyR;
+    for(int i = 0; i < 11; i++)
+    {
+        dummyMaxCamPos = 0.5 * chord[i][j];
+        dummyChord = chord[i][j];
+
+        for(int r = 0; r <= resolution; r++)
+        {
+            dt = dummyChord / resolution;
+            dummyLiftCoefficient = liftCoefficient[i][j][r];
+            discharge1 = func( dt * ( resolution - 2 ) , discharge1 );
+            discharge2 = func( dt * ( resolution - 1 ) , discharge2 );
+
+            dischargeAngle[i][j][r] = atan2( discharge2 - discharge1 , dt ) * RadToDegree;
+            
+            if( j == 0)
+            {
+            rotateAngle[i][j][r] = beta[i][1][r] - dischargeAngle[i][j][r];
+            }
+            if( j == 1)
+            {
+            rotateAngle[i][j][r] = alpha[i+1][0][r] - dischargeAngle[i][j][r];
+            }
+
+            batchAnalysis[i] << r << " " <<  rotateAngle[i][j][r] << "\n";
+
+        }
+    }
+}
+
 void getBladeAngles(int i, int j)
 {
     double dr1, dr2, radius1, radius2, E, alphaPoint;
@@ -490,124 +636,18 @@ void getBladeAngles(int i, int j)
     }
 }
 
-//j is either one(rotor) or two(stator)
-void getCamberline(int i, int j, int r)
-{
-    double dummyR = 0.0;
-    //distance to the maximum camber, dimesionless
-    maxCamPos[i][j] = 0.25 * chord[i][j];
-    double theta;
-
-    if(j == 0)
-    {
-    theta = beta[i][0][r] - beta[i][1][r]; 
-    }
-    if(j == 1)
-    {
-    theta = alpha[i][0][r] - alpha[i][1][r]; 
-    }
-
-    maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
-
-    //initialising dummy variables
-    dummyMaxCam = maxCam[i][j];
-    dummyMaxCamPos = maxCamPos[i][j];
-    dummyChord = chord[i][j]; 
-
-
-    //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
-
-    for(double dt = 0; dt < dummyChord;)
-    {
-        dummyR = func( dt, dummyR );
-        dt += dummyChord/resolution;
-        file_out << dt << " " << dummyR << "\n";
-    }
-
-    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
-
-}
-
-// j = 0 for rotor and j = 1 for stator, can be used for any analysis
-void analysisCamber(int j)
-{
-    for(int i = 0; i < 11; i++)
-    {
-    maxCamPos[i][j] = 0.3 * chord[i][j];
-    double theta, yValue;
-
-    //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
-
-    for(int r = 0; r <= resolution; r++)
-    {
-    // // //yValue = ( hub_radi[i][j] + dr * r ) / mean_radi[i][j];
-    //if(j == 0)
-    //{
-    theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
-    //}
-    // if(j == 0)
-    // {
-    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
-    // }
-
-    // if(j == 0)s
-    // {
-    // theta = beta[i][0][r] - beta[i][1][r]; 
-    // }
-    // if(j == 1)
-    // {
-    // theta = alpha[i][1][r] - alpha[i+1][0][r]; 
-    // }
-
-    //maxCam[i][j] = chord[i][j] / ( 4 * tan( theta / RadToDegree ) ) * ( sqrt( fabs( 1 + pow( 4 * ( tan( theta / RadToDegree ) ) , 2 ) * ( maxCamPos[i][j] / chord[i][j] - pow( maxCamPos[i][j] / chord[i][j] - 3.0 / 16.0 , 2 ) ) ) ) - 1 );
-
-    // if(j == 1)
-    // {
-    // batchAnalysis[i] << r << " " << alpha[i][j][r] << "\n";
-    // }
-    // if(j == 0)
-    // {
-    // batchAnalysis[i] << r << " " << beta[i][j][r] << "\n";
-    // }
-    
-
-    //get loss coefficients, not extremely accurate but it's alright
-    lossCoefficient[i][0][r] = 0.014 * solidity[i] / cos( beta[i][1][r] / RadToDegree );
-    lossCoefficient[i][1][r] = 0.014 * solidity[i] / cos( alpha[i+1][0][r] / RadToDegree );
-    
-    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
-    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
-
-    //pressure loss is in Kpascal
-    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
-    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
-
-    liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
-    liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
-
-    batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
-
-    //efficiency analysis
-    //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
-    //batchAnalysis[i] << r << " " <<  dummyEfficiency << "\n";
-    }
-    }
-    //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
-
-    drawShape();
-
-}
 
 void generateBlade(int i, int j)
 {
     double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
     double radius;
-    dummyLiftCoefficient = 1.0;
     char filename[] = "blade.stl"; //for blockMesh : blockMeshDict
     blockMeshGen::init(filename);
 
     for(int r = 0; r <= resolution; r++)
     {
+        dummyLiftCoefficient = liftCoefficient[i][j][r];
+    
         radius = dr * r + hub_radi[i][j];
 
         //distance to the maximum camber, dimesionless
@@ -810,11 +850,11 @@ int main()
     {
     test.getFlowPaths(i);
     }
-    
-    //test.getBladeAngles(10,1);
-    //test.generateBlade(10,1);
-    //test.getCamberline(3,1,50);
     test.analysisCamber(1);
+    test.getLeadingTrailingAngles(1);
+    //test.getBladeAngles(10,1);
+    //test.generateBlade(0,0);
+    //test.getCamberline(3,1,50);
     //test.clear();
     
     //TODO check De Haller's number
