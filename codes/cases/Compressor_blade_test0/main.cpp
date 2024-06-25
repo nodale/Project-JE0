@@ -16,7 +16,7 @@
 #define gamma 1.4
 
 //TODO
-//fix blade stl generator
+//fix blade thickness dsit. and blade mesh generator
 
 class Blade : public solver1, public blockMeshGen
 {
@@ -714,7 +714,7 @@ void generateBlade(int i, int j)
             
             blockMeshGen::collectVertices(0.5 * dummyChord - dummyXU, dummyYU, radius);
             
-            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             
             dt += 2 * dummyChord/resolution;
             count += 1;
@@ -738,7 +738,7 @@ void generateBlade(int i, int j)
             
             blockMeshGen::collectVertices(0.5 * dummyChord - dummyXL, dummyYL, radius);
             
-            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             
             dt -= 2 * dummyChord/resolution;
             count += 1;
