@@ -16,7 +16,7 @@
 #define gamma 1.4
 
 //TODO
-//find tengential velocity 2 based on the energy used
+//fix blade stl generator
 
 class Blade : public solver1, public blockMeshGen
 {
@@ -84,6 +84,7 @@ double efficiency[11][2];
 std::vector<double> lossCoefficient[11][2];
 std::vector<double> pressureLoss[11][2];
 std::vector<double> dischargeAngle[11][2];
+double aValues[5] = { 0.2969, -0.1260, -0.3516, 0.2843, -0.1015 } ;
 
 double solidity[11];
 
@@ -690,18 +691,59 @@ void generateBlade(int i, int j)
         dummyMaxCamPos = maxCamPos[i][j];
         
         //std::cout << theta << " " << dummyMaxCam << " " << dummyMaxCamPos << " " << dummyChord << std::endl;
-        double dummyR, dummyDist;
+        double dummyR = 0.0;
+        double dummyDist = 0.0; 
+        double dummyT, dummyXU, dummyYU, dummyXL, dummyYL, dummyAngle, dummyPrevX, dummyPrevY;
         int count = 0;
+        //UPPER
         for(double dt = 0; dt <= dummyChord;)
         {
+            dummyPrevX = dummyDist;
+            dummyPrevY = dummyR;
+            //calculating camber abscissa for rotated coordinate
             dummyDist = 0.5 * dummyChord - dt;
+            //calculating camber ordinate
             dummyR = func( dt, dummyR );
-            transformAngle(rotateAngle[i][j][r], dummyDist, dummyR);//0.5 * dummyChord - dummyDist
-            blockMeshGen::collectVertices(0.5 * dummyChord - dummyDist, dummyR, radius);
+            //calculating thickness yt
+            dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
+            //getting upper x
+            dummyXU = dummyDist - dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+            dummyYU = dummyR + dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+
+            transformAngle(rotateAngle[i][j][r], dummyXU, dummyYU);//0.5 * dummyChord - dummyDist
+            
+            blockMeshGen::collectVertices(0.5 * dummyChord - dummyXU, dummyYU, radius);
+            
             std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
-            dt += dummyChord/resolution;
+            
+            dt += 2 * dummyChord/resolution;
             count += 1;
         }
+        dummyR = 0.0;
+        dummyDist = 0.0;
+        //LOWER
+        for(double dt = dummyChord; dt >= 0;)
+        {
+            //calculating camber abscissa for rotated coordinate
+            dummyDist = 0.5 * dummyChord - dt;
+            //calculating camber ordinate
+            dummyR = func( dt, dummyR );
+            //calculating thickness yt
+            dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
+            
+            dummyXL = dummyDist + dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+            dummyYL = dummyR - dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+
+            transformAngle(rotateAngle[i][j][r], dummyXL, dummyYL);//0.5 * dummyChord - dummyDist
+            
+            blockMeshGen::collectVertices(0.5 * dummyChord - dummyXL, dummyYL, radius);
+            
+            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            
+            dt -= 2 * dummyChord/resolution;
+            count += 1;
+        }
+
         //t += 2;
         //}
     }
@@ -901,7 +943,7 @@ int main()
     double omega_1 = 3250; //3250
     double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
-    double resol = 450;
+    double resol = 250;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
