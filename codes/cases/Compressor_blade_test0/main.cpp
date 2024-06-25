@@ -667,7 +667,7 @@ void generateBlade(int i, int j)
         radius = dr * r + hub_radi[i][j];
 
         //distance to the maximum camber, dimesionless
-        dummyChord = 1.0; //chord[i][j]; 
+        dummyChord = chord[i][j]; 
         maxCamPos[i][j] = 0.50 * dummyChord;
         double theta;
 
@@ -698,7 +698,7 @@ void generateBlade(int i, int j)
             dummyR = func( dt, dummyR );
             transformAngle(rotateAngle[i][j][r], dummyDist, dummyR);//0.5 * dummyChord - dummyDist
             blockMeshGen::collectVertices(0.5 * dummyChord - dummyDist, dummyR, radius);
-            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+            std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             dt += dummyChord/resolution;
             count += 1;
         }
@@ -837,8 +837,10 @@ bool getDeHallerNumber(double alpha1, double alpha2, double beta1, double beta2)
 
 void transformAngle(double angle, double &x, double &y)
 {
-    x = x * cos( angle / RadToDegree ) + y * sin( angle / RadToDegree );
-    y = -x * sin( angle / RadToDegree ) + y * cos( angle / RadToDegree );
+    double dummyX = x;
+    double dummyY = y;
+    x = dummyX * cos( angle / RadToDegree ) + dummyY * sin( angle / RadToDegree );
+    y = -dummyX * sin( angle / RadToDegree ) + dummyY * cos( angle / RadToDegree );
 }
 //parabolic camberline
 // double func(double x, double y) override
@@ -899,7 +901,7 @@ int main()
     double omega_1 = 3250; //3250
     double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
-    double resol = 250;
+    double resol = 450;
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
