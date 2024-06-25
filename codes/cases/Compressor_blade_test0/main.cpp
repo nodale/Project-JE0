@@ -634,13 +634,13 @@ void getBladeAngles(int i, int j)
                 {
                 AoA[i][j][r] = k1 - beta[i][0][r];
                 
-                std::cout << "inlet :  "<< k1 << " " << fabs(beta[i][0][r]) << "   outlet :  " << k2 << " " << fabs(beta[i][1][r]) << "\n";
+                //std::cout << "inlet :  "<< k1 << " " << fabs(beta[i][0][r]) << "   outlet :  " << k2 << " " << fabs(beta[i][1][r]) << "\n";
                 }
                 if(j == 1)
                 {
                 AoA[i][j][r] = k2 - alpha[i][1][r];
 
-                std::cout << "inlet :  "<< k1 << " " << fabs(alpha[i][1][r]) << "   outlet :  " << k2 << " " << fabs(alpha[i+1][0][r]) << "\n";
+                //std::cout << "inlet :  "<< k1 << " " << fabs(alpha[i][1][r]) << "   outlet :  " << k2 << " " << fabs(alpha[i+1][0][r]) << "\n";
                 }
                 //batchAnalysis[i] << r << " " <<  AoA[i][j][r] << "\n";
                 stop = 1;
@@ -667,7 +667,7 @@ void generateBlade(int i, int j)
         radius = dr * r + hub_radi[i][j];
 
         //distance to the maximum camber, dimesionless
-        dummyChord = chord[i][j]; 
+        dummyChord = 1.0; //chord[i][j]; 
         maxCamPos[i][j] = 0.50 * dummyChord;
         double theta;
 
@@ -694,11 +694,10 @@ void generateBlade(int i, int j)
         int count = 0;
         for(double dt = 0; dt <= dummyChord;)
         {
+            dummyDist = 0.5 * dummyChord - dt;
             dummyR = func( dt, dummyR );
-            dummyDist = dt - 0.5 * dummyChord;
             transformAngle(rotateAngle[i][j][r], dummyDist, dummyR);//0.5 * dummyChord - dummyDist
             blockMeshGen::collectVertices(0.5 * dummyChord - dummyDist, dummyR, radius);
-
             //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
             dt += dummyChord/resolution;
             count += 1;
@@ -838,10 +837,9 @@ bool getDeHallerNumber(double alpha1, double alpha2, double beta1, double beta2)
 
 void transformAngle(double angle, double &x, double &y)
 {
-        x = cos( angle / RadToDegree ) * x;
-        y = tan( angle / RadToDegree ) * x;
+    x = x * cos( angle / RadToDegree ) + y * sin( angle / RadToDegree );
+    y = -x * sin( angle / RadToDegree ) + y * cos( angle / RadToDegree );
 }
-
 //parabolic camberline
 // double func(double x, double y) override
 // {
@@ -913,7 +911,7 @@ int main()
     test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
-    int f = 1;
+    int f = 0;
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
@@ -924,7 +922,7 @@ int main()
     {
     test.getBladeAngles(i,f);
     }
-    test.generateBlade(1,1);
+    test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();
     

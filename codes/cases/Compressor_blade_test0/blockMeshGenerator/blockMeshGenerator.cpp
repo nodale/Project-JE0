@@ -135,8 +135,8 @@ void blockMeshGen::generateStl(int resolution)
                         tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
                     }
 
-                    //out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
-                    out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+                    out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+                    //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
                     out << "outer loop\n";
                     
                     for(int i = 0; i < 3; i++)
