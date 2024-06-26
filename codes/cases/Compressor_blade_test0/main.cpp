@@ -4,10 +4,12 @@
 #include <cmath>
 #include <fstream>
 #include <ratio>
+#include <chrono>
 #include <thread>
 #include <vector>
 #include "ODE_solver/solver1.h"
 #include "blockMeshGenerator/blockMeshGenerator.h"
+#include <complex>
 
 #define e 2.718281828459045
 #define PI 3.14159265
@@ -16,7 +18,7 @@
 #define gamma 1.4
 
 //TODO
-//fix blade thickness dsit. and blade mesh generator
+//finish conformal transform, psi, ehta, and y are variables of x
 
 class Blade : public solver1, public blockMeshGen
 {
@@ -496,8 +498,8 @@ void analysisCamber(int j)
     }
     //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
 
-    drawShape();
-
+    //drawShape();
+    getAerofoilTD();
 }
 
 void getLeadingTrailingAngles(int j)
@@ -653,7 +655,6 @@ void getBladeAngles(int i, int j)
     //drawFlowPath();
 }
 
-
 void generateBlade(int i, int j)
 {
     double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
@@ -695,59 +696,66 @@ void generateBlade(int i, int j)
         double dummyDist = 0.0; 
         double dummyT, dummyXU, dummyYU, dummyXL, dummyYL, dummyAngle, dummyPrevX, dummyPrevY;
         int count = 0;
-        //UPPER
-        for(double dt = 0; dt <= dummyChord;)
+        for(int ra = 0; ra < 2; ra++)
         {
-            dummyPrevX = dummyDist;
-            dummyPrevY = dummyR;
-            //calculating camber abscissa for rotated coordinate
-            dummyDist = 0.5 * dummyChord - dt;
-            //calculating camber ordinate
-            dummyR = func( dt, dummyR );
-            //calculating thickness yt
-            dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
-            //getting upper x
-            dummyXU = dummyDist - dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
-            dummyYU = dummyR + dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+            //UPPER
+            for(double dt = 0; dt <= dummyChord;)
+            {
+                dummyPrevX = dummyDist;
+                dummyPrevY = dummyR;
+                //calculating camber abscissa for rotated coordinate
+                dummyDist = 0.5 * dummyChord - dt;
+                //calculating camber ordinate
+                dummyR = func( dt, dummyR );
+                //calculating thickness yt
+                dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
+                //getting upper x
+                dummyXU = dummyDist - dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+                dummyYU = dummyR + dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
 
-            transformAngle(rotateAngle[i][j][r], dummyXU, dummyYU);//0.5 * dummyChord - dummyDist
-            
-            blockMeshGen::collectVertices(0.5 * dummyChord - dummyXU, dummyYU, radius);
-            
-            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
-            
-            dt += 2 * dummyChord/resolution;
-            count += 1;
+                transformAngle(rotateAngle[i][j][r], dummyXU, dummyYU);//0.5 * dummyChord - dummyDist
+                
+                blockMeshGen::collectVertices(0.5 * dummyChord - dummyXU, dummyYU, radius);
+                
+                std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+                
+                dt += 2 * dummyChord/resolution;
+                count += 1;
+
+            }
+            // dummyR = 0.0;
+            // dummyDist = 0.0;
+            // //LOWER
+            for(double dt = dummyChord; dt >= 0;)
+            {
+                //calculating camber abscissa for rotated coordinate
+                dummyDist = 0.5 * dummyChord - dt;
+                //calculating camber ordinate
+                dummyR = func( dt, dummyR );
+                //calculating thickness yt
+                dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
+                
+                dummyXL = dummyDist + dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+                dummyYL = dummyR - dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
+
+                transformAngle(rotateAngle[i][j][r], dummyXL, dummyYL);//0.5 * dummyChord - dummyDist
+                
+                blockMeshGen::collectVertices(0.5 * dummyChord - dummyXL, dummyYL, radius);
+                
+                std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
+                
+                dt -= 2 * dummyChord/resolution;
+                count += 1;
+
+            }
+            r += 1;
         }
-        dummyR = 0.0;
-        dummyDist = 0.0;
-        //LOWER
-        for(double dt = dummyChord; dt >= 0;)
-        {
-            //calculating camber abscissa for rotated coordinate
-            dummyDist = 0.5 * dummyChord - dt;
-            //calculating camber ordinate
-            dummyR = func( dt, dummyR );
-            //calculating thickness yt
-            dummyT = 5 * 0.1 * dummyChord * ( sqrt( dummyDist ) * aValues[0]  +  aValues[1] * dummyDist  + aValues[2] * pow( dummyDist , 2 ) + aValues[3] * pow( dummyDist , 3 ) + aValues[4] * pow( dummyDist, 4 ) );
-            
-            dummyXL = dummyDist + dummyT * sin( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
-            dummyYL = dummyR - dummyT * cos( atan2( dummyR - dummyPrevY , dummyDist - dummyPrevX ) );
-
-            transformAngle(rotateAngle[i][j][r], dummyXL, dummyYL);//0.5 * dummyChord - dummyDist
-            
-            blockMeshGen::collectVertices(0.5 * dummyChord - dummyXL, dummyYL, radius);
-            
-            //std::cout << "progress : vertex number " << count << " and radius " << r << " out of " << resolution << std::endl; 
-            
-            dt -= 2 * dummyChord/resolution;
-            count += 1;
-        }
-
+        blockMeshGen::generateStl(resolution);
+        blockMeshGen::clear();
         //t += 2;
         //}
     }
-    blockMeshGen::generateStl(resolution);
+    
     // blockMeshGen::generateVertices();  
     // blockMeshGen::generateEdges();    
     // blockMeshGen::generateBlocks();
@@ -777,6 +785,42 @@ void clear()
             pressureLoss[i][j].clear();
         }
     }
+}
+
+void getAerofoilTD()
+{
+
+    double r, shape, psiA;
+    r = 1.0;
+    shape = 0.02;
+    psiA = 0.12;
+    fileOut.close();
+    fileOut.open("aerofoil/0.dat" , std::ofstream::trunc);
+    
+
+    //defining the complex equation
+    std::complex<double> z, seta, thetaC;
+
+    //getting the abscissa and ordinates
+
+    for( double thetaAerofoil = 0; thetaAerofoil <= 2 * PI;)
+    {
+        thetaC = std::complex<double>( 0.0 , 45 / RadToDegree);
+        z = std::complex( r * ( exp(psiA) + exp(-psiA) ) * cos(thetaAerofoil), r * ( exp(psiA) - exp(-psiA) ) * sin(thetaAerofoil) );
+        seta = joukowskyTransform(z, shape);
+
+
+
+        thetaAerofoil += PI / resolution;
+        fileOut << seta.real() << " " << seta.imag() << "\n";
+    }
+    // xAerofoil = 2 * scaleAerofoil * coshl( psiAerofoil ) * cos( thetaAerofoil );
+    // yAerofoil = 2 * scaleAerofoil * sinhl( psiAerofoil ) * sin( thetaAerofoil );
+
+    // thetaAerofoil
+    // yAerofoil = 2 * scaleAerofoil * sinhl( psiAerofoil ) * sin( thetaAerofoil );
+
+    
 }
 
 private:
@@ -906,6 +950,11 @@ double func_real(double x, double y) override
     return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
 
+std::complex<double> joukowskyTransform(std::complex<double> z, double shape)
+{
+    return ( z + pow(shape,2) / z );
+}
+
 };
 
 int main()
@@ -943,7 +992,7 @@ int main()
     double omega_1 = 3250; //3250
     double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
-    double resol = 250;
+    double resol = 150; 
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
@@ -961,12 +1010,12 @@ int main()
     test.getFlowPaths(i);
     }
     test.analysisCamber(f);
-    test.getLeadingTrailingAngles(f);
-    for(int i = 0; i < 11; i++)
-    {
-    test.getBladeAngles(i,f);
-    }
-    test.generateBlade(0,f);
+    //test.getLeadingTrailingAngles(f);
+    // for(int i = 0; i < 11; i++)
+    // {
+    // test.getBladeAngles(i,f);
+    // }
+    //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();
     

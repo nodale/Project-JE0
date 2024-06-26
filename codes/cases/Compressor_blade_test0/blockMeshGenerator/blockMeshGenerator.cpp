@@ -13,7 +13,7 @@ void blockMeshGen::init(char* target)
 void blockMeshGen::collectVertices(double x, double y, double r)
 {
     std::vector<double> temp{ x, y, r };
-    vertices.push_back(temp);
+    vertices.insert(vertices.end(),temp);
 }
 
 void blockMeshGen::generateVertices()
@@ -90,20 +90,20 @@ void blockMeshGen::generateStl(int resolution)
 {
     //calculate normal
     std::vector<std::vector<double>> tempValue;
-    double tempLine[2][3];
+    std::vector<std::vector<double>> tempLine;
     double tempPerpendicular[3];
     double tempNormal[3];
     double tempLength;
-    int quotient;
+    int quotient; 
 
     int dummyRes = resolution + 1;
 
     std::vector<std::vector<double>> tempVertices;
 
-    tempVertices.push_back(vertices[1 + 2 * resolution]);
-    tempVertices.push_back(vertices[resolution]);
-    tempVertices.push_back(vertices[resolution+1]);
-    tempVertices.push_back(vertices[0]);
+    // tempVertices.push_back(vertices[resolution + 2]);
+    // tempVertices.push_back(vertices[resolution]);
+    // tempVertices.push_back(vertices[resolution+1]);
+    // tempVertices.push_back(vertices[1]);
     
 
     out << "solid Blade\n";
@@ -114,45 +114,67 @@ void blockMeshGen::generateStl(int resolution)
             // if( remainder( d - resolution, dummyRes) != 0 )
             // {
             
-                if( remquo( d - resolution, dummyRes, &quotient) == 0  )
-                {
-                    
-                    if(l == 0)
-                    {
-                        tempValue.push_back(tempVertices[3]);
-                        tempValue.push_back(tempVertices[0]);
-                        tempValue.push_back(tempVertices[2]);
-                    }
+            // if( remainder( d - resolution, dummyRes) == 0 )
+            // {
+            //     if(l == 0)
+            //     {
+            //         tempValue.clear();
+            //         tempValue.push_back(tempVertices[3]);
+            //         tempValue.push_back(tempVertices[0]);
+            //         tempValue.push_back(tempVertices[2]);
+            //     }
 
-                    if(l == 1)
-                    {
-                        tempValue.push_back(tempVertices[1]);
-                        tempValue.push_back(tempVertices[0]);
-                        tempValue.push_back(tempVertices[3]);
-                    }
-                }
-                if( remquo( d - resolution, dummyRes, &quotient) != 0  )
-                {
+            //     if(l == 1)
+            //     {
+            //         tempValue.clear();
+            //         tempValue.push_back(tempVertices[1]);
+            //         tempValue.push_back(tempVertices[0]);
+            //         tempValue.push_back(tempVertices[3]);
+            //     }
+            // }
+
+            // if( remainder( d - resolution, dummyRes) != 0  )
+            // {
                 if(l == 0)
                 {
-                    tempValue.push_back(vertices[d+resolution+1]);
+                    tempValue.clear();
+                    tempValue.push_back(vertices[d+resolution]);
                     tempValue.push_back(vertices[d+1]);
                     tempValue.push_back(vertices[d]);
                 }
 
                 if(l == 1)
                 {
-                    tempValue.push_back(vertices[d+resolution+2]);
-                    tempValue.push_back(vertices[d+1]);
+                    tempValue.clear();
                     tempValue.push_back(vertices[d+resolution+1]);
+                    tempValue.push_back(vertices[d+1]);
+                    tempValue.push_back(vertices[d+resolution]);
                 }
+            //}
+            
+            // tempLine.reserve(2);
+            // tempLine[0].reserve(3);
+            // tempLine[1].reserve(3);
+
+
+            //need to fix this
+            for(int e = 0; e < 2; e++)
+            {
+                for(int f = 0; f < 3; f++)
+                {
+                    if(std::isnan(tempValue[e][f]) == 1)
+                    {
+                        tempValue[e][f] = 0.0;
+                    }
                 }
+            }
+            
             for(int i = 0; i < 3; i++)
             {
                 tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
                 tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
             }
-
+            
             tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
             tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
             tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
@@ -170,24 +192,31 @@ void blockMeshGen::generateStl(int resolution)
             
             for(int i = 0; i < 3; i++)
             {
-            out << "vertex " << tempValue[i][0] * 100 << " " << tempValue[i][1] * 100 << " " << tempValue[i][2] * 100 << "\n";
+            out << "vertex " << tempValue[i][0] * 1000 << " " << tempValue[i][1] * 1000 << " " << tempValue[i][2] * 1000 << "\n";
             }
 
             out << "endloop\n" << "endfacet\n";
 
-            tempValue.clear();
-            tempVertices.clear();
+            
 
-            if( remquo( d - resolution, dummyRes, &quotient) == 0  )
-            {
-                tempVertices.push_back(vertices[quotient * resolution + 1 + 2 * resolution]);
-                tempVertices.push_back(vertices[quotient * resolution + resolution]);
-                tempVertices.push_back(vertices[quotient * resolution + resolution + 1]);
-                tempVertices.push_back(vertices[quotient * resolution]);
-            }            
+            // if( remainder( d, dummyRes) == 0 )
+            // {
+            //     quotient = d / dummyRes;
+    
+            //     tempVertices.clear();
+            //     tempVertices.push_back(vertices[d + resolution + 1]);
+            //     tempVertices.push_back(vertices[d]);
+            //     tempVertices.push_back(vertices[d + resolution + 2]);
+            //     tempVertices.push_back(vertices[d+1]);    
+            // }            
         
         }
 
     }
 
+}
+
+void blockMeshGen::clear()
+{
+    vertices.clear();
 }

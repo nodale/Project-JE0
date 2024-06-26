@@ -22,6 +22,8 @@ void generateBoundaries();
 //generate an stl file
 void generateStl(int resolution);
 
+void clear();
+
 private:
 
 
