@@ -790,30 +790,48 @@ void clear()
 void getAerofoilTD()
 {
 
-    double r, shape, psiA;
+    double r, shape, psiA, extraR;
     r = 1.0;
-    shape = 0.02;
-    psiA = 0.12;
+    shape = 1.0;
     fileOut.close();
+    fileOut2.close();
     fileOut.open("aerofoil/0.dat" , std::ofstream::trunc);
+    fileOut2.open("aerofoil/circle.dat" , std::ofstream::trunc);
     
+    psiA = 1.0;
 
     //defining the complex equation
-    std::complex<double> z, seta, thetaC;
+    std::complex<double> z, seta, thetaC, displac;
+
+    //enter the displacement of the circle
+    displac = std::complex( -0.1, 0.2 );
+    //extraR = 0 * sqrt( pow( displac.real() , 2 ) + pow( displac.imag() , 2 ) );
+    extraR = fabs( displac.real() );
 
     //getting the abscissa and ordinates
-
-    for( double thetaAerofoil = 0; thetaAerofoil <= 2 * PI;)
+    for( double thetaAerofoil = 0.0; thetaAerofoil <= 2.0 *  PI;)
     {
-        thetaC = std::complex<double>( 0.0 , 45 / RadToDegree);
-        z = std::complex( r * ( exp(psiA) + exp(-psiA) ) * cos(thetaAerofoil), r * ( exp(psiA) - exp(-psiA) ) * sin(thetaAerofoil) );
+
+        //thetaC = std::complex<double>( 0.0 , 45 / RadToDegree);
+        //z = std::complex( (r ) * ( exp(psiA) + exp(-psiA) ) * cos(thetaAerofoil ), r * ( exp(psiA) - exp(-psiA) ) * sin(thetaAerofoil) );
+        z = std::complex( (r + extraR ) * cos(thetaAerofoil) + displac.real(), (r + extraR ) * sin(thetaAerofoil) + displac.imag());
+
         seta = joukowskyTransform(z, shape);
-
-
 
         thetaAerofoil += PI / resolution;
         fileOut << seta.real() << " " << seta.imag() << "\n";
+        fileOut2 << z.real() << " " << z.imag() << "\n";
     }
+
+    // fileOut2 << "\n";
+
+    // for( double thetaAerofoil = 0.0; thetaAerofoil <= 2.0 *  PI;)
+    // {
+    //     z = std::complex( (r ) * cos(thetaAerofoil) , (r ) * sin(thetaAerofoil));
+    //     thetaAerofoil += PI / resolution;
+    //     fileOut2 << z.real() << " " << z.imag() << "\n";
+    // }
+
     // xAerofoil = 2 * scaleAerofoil * coshl( psiAerofoil ) * cos( thetaAerofoil );
     // yAerofoil = 2 * scaleAerofoil * sinhl( psiAerofoil ) * sin( thetaAerofoil );
 
