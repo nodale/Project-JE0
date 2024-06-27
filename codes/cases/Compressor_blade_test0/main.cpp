@@ -18,7 +18,7 @@
 #define gamma 1.4
 
 //TODO
-//finish conformal transform, psi, ehta, and y are variables of x
+//potential flow analysis for the airofil and its lift coefficient
 
 class Blade : public solver1, public blockMeshGen
 {
