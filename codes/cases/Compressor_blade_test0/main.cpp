@@ -834,34 +834,50 @@ void getAerofoilTD(int i, int j)
 
     if(j == 0)
     {
-        theta = beta[i][0][R] - beta[i][1][R];
+        theta = beta[i][0][R];
     }
     if(j == 1)
     {
-        theta = alpha[i][1][R] - alpha[i+1][0][R];
+        theta = alpha[i][1][R];
     }
 
     radius = hub_radi[i][j] + dr * R;
     double discharge1, discharge2, dischargeX1, dischargeX2;
-    //getting the abscissa and ordinates
-    for( double thetaAerofoil = 0.0 * PI; thetaAerofoil <= 2.0 *  PI;)
-    {
-        disX = psiA - psiC * cos(thetaAerofoil);
 
-        // for(int repeat = 0; repeat < 5; repeat++)
-        // {        
+
+    while(true)
+    {
+        disX = psiA - psiC * cos( 2.0 * PI - 0 * PI / resolution );
         displac = std::complex( disX , getDisplacementY( liftCoefficient[i][j][R], theta, disX, radius ) );
         extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
 
         dummyF = std::complex( extraR * cos( 2.0 * PI - 0 * PI / resolution) + displac.real(), extraR * sin(2.0 * PI - 0 * PI / resolution) + displac.imag());
-        dummyAerofoil = joukowskyTransform(dummyF, shape, 0.0);
+        dummyAerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
         discharge1 = dummyAerofoil.imag();
         dischargeX1 = dummyAerofoil.real();
+
+        disX = psiA - psiC * cos( 2.0 * PI - 1 * PI / resolution );
+        displac = std::complex( disX , getDisplacementY( liftCoefficient[i][j][R], theta, disX, radius ) );
+        extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
+
         dummyF = std::complex( extraR * cos( 2.0 * PI - 1 * PI / resolution) + displac.real(), extraR * sin(2.0 * PI - 1 * PI / resolution) + displac.imag());
-        dummyAerofoil = joukowskyTransform(dummyF, shape, 0.0);
+        dummyAerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
         discharge2 = dummyAerofoil.imag(); 
         dischargeX2 = dummyAerofoil.real();
-        dischargeAngle[i][j][R] = atan2(  discharge2 - discharge1  , fabs( dischargeX2 - dischargeX1 ) ) * RadToDegree;
+        
+        dischargeAngle[i][j][R] = atan2(  discharge2 - discharge1  ,  dischargeX2 - dischargeX1  ) * RadToDegree;
+
+        if((int)beta[i][1][R] == (int)dischargeAngle[i][j][R] or (int)alpha[i+1][0][R] == (int)dischargeAngle[i][j][R] )
+        {
+            std::cout << rotateAngle[i][j][R] << std::endl;
+            std::cout << "angle matched\n";
+
+            if(incidenceAngle[i][j][R] <= 12 && incidenceAngle[i][j][R] >= -8)
+            {
+                break;
+            }
+
+        }
 
         if( j == 0)
         {
@@ -874,12 +890,13 @@ void getAerofoilTD(int i, int j)
         incidenceAngle[i][j][R] = alpha[i][1][R] - rotateAngle[i][j][R];
         }
 
-        //}
+        
+        std::cout << "angle error\n"; 
+    }
 
-
-
-
-
+    //getting the abscissa and ordinates
+    for( double thetaAerofoil = 0.0 * PI; thetaAerofoil <= 2.0 *  PI;)
+    {
 
         thetaC = std::complex<double>( 0.0 , rotateAngle[i][j][R] / RadToDegree);
 
@@ -1093,7 +1110,7 @@ int main()
     test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
-    int f = 1;
+    int f = 0;
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
