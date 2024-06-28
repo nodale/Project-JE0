@@ -21,6 +21,10 @@ void generateBoundaries();
 
 //generate an stl file
 void generateStl(int resolution);
+void generateBoundary(int resolution);
+
+//still in work, for snappyHexMesh
+void generateSnappy();
 
 void clear();
 

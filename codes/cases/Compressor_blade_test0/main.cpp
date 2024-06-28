@@ -40,6 +40,7 @@ double omega1;
 double omega2;
 double v[11][3];
 double work[11];
+int numBlades[11][2];
 
 //Mach[i][0] is for velocity 2 relative
 //Mach[i][1] is for velocity 3 absolute 
@@ -215,6 +216,12 @@ Blade(double (&tipP)[11][3], double hub, double w1, double w2, double res, doubl
 
     solidity[0] = ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] );
 
+    numBlades[0][0] = 2 * PI * mean_radi[0][0] / ( chord[0][0] / solidity[0] );
+    numBlades[0][1] = 2 * PI * mean_radi[0][1] / ( chord[0][1] / solidity[0] );
+
+    chord[0][0] = solidity[0] * 2 * PI * mean_radi[0][0] / numBlades[0][0];
+    chord[0][1] = solidity[0] * 2 * PI * mean_radi[0][1] / numBlades[0][1];
+
     double vu1_r = VX[0] * tan( meanAlpha[0][0] / RadToDegree );
 
     //1st approach
@@ -329,6 +336,11 @@ void init()
         vu2_r = ( work[i] + omega2 * vu1_r * mean_radi[i][0] ) / ( omega2 * mean_radi[i][0] );
     }
 
+    numBlades[i][0] = 2 * PI * mean_radi[i][0] / ( chord[i][0] / solidity[i] );
+    numBlades[i][1] = 2 * PI * mean_radi[i][1] / ( chord[i][1] / solidity[i] );
+
+    chord[i][0] = solidity[i] * 2 * PI * mean_radi[i][0] / numBlades[i][0];
+    chord[i][1] = solidity[i] * 2 * PI * mean_radi[i][1] / numBlades[i][1];
     
     a[i] = 0.5 * ( vu1_r + vu2_r );
     b[i] = 0.5 * ( vu2_r - vu1_r );
@@ -437,7 +449,7 @@ void analysisCamber(int j)
 {
     for(int i = 0; i < 11; i++)
     {
-    maxCamPos[i][j] = 0.5 * chord[i][j];
+    //maxCamPos[i][j] = 0.5 * chord[i][j];
     double theta, yValue;
 
     //double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
@@ -489,7 +501,7 @@ void analysisCamber(int j)
     liftCoefficient[i][0][r] = 2.0 / solidity[i] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[i] / cos( beta[i][0][r] / RadToDegree ) + VX[i] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[i] / cos( alpha[i][1][r] / RadToDegree ) + VX[i] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i] );
 
-    batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
+    //batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
 
     //efficiency analysis
     //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
@@ -499,7 +511,6 @@ void analysisCamber(int j)
     //solver1::rungeKuttam(dummyChord, 0.0, 0.01 / resolution, 0.0, dummyChord, solver1::RK4[0][0], solver1::RK4[1][0], solver1::RK4[2]);
 
     //drawShape();
-    getAerofoilTD();
 }
 
 void getLeadingTrailingAngles(int j)
@@ -787,57 +798,105 @@ void clear()
     }
 }
 
-void getAerofoilTD()
+void getAerofoilTD(int i, int j)
 {
+    char filename[] = "blade.stl"; //for blockMesh : blockMeshDict
+    blockMeshGen::init(filename);
 
-    double r, shape, psiA, extraR;
+    double r, shape, extraR;
     r = 1.0;
     shape = 1.0;
-    fileOut.close();
-    fileOut2.close();
-    fileOut.open("aerofoil/0.dat" , std::ofstream::trunc);
-    fileOut2.open("aerofoil/circle.dat" , std::ofstream::trunc);
     
-    psiA = 1.0;
-
+    // fileOut.close();
+    // fileOut2.close();
+    // fileOut.open("aerofoil/0.dat" , std::ofstream::trunc);
+    // fileOut2.open("aerofoil/circle.dat" , std::ofstream::trunc);
+    
     //defining the complex equation
-    std::complex<double> z, seta, thetaC, displac;
+    std::complex<double> z, seta, thetaC, displac, F, aerofoil, dummyF, dummyAerofoil;
+    double potentialC, streamC, Gamma;
 
     //enter the displacement of the circle
-    displac = std::complex( -0.1, 0.2 );
-    //extraR = 0 * sqrt( pow( displac.real() , 2 ) + pow( displac.imag() , 2 ) );
-    extraR = fabs( displac.real() );
 
-    //getting the abscissa and ordinates
-    for( double thetaAerofoil = 0.0; thetaAerofoil <= 2.0 *  PI;)
+    double psiA, psiC, disX;
+
+    double U = 1.0;
+    psiA = 0.08;
+    psiC = 0.012;
+
+    double theta;
+    double dr = ( tip_radi[i][j] - hub_radi[i][j] ) / resolution;
+    double radius;
+    double dummyScale = chord[i][j];
+
+    for(int R = 0; R <= resolution; R++)
     {
 
-        //thetaC = std::complex<double>( 0.0 , 45 / RadToDegree);
-        //z = std::complex( (r ) * ( exp(psiA) + exp(-psiA) ) * cos(thetaAerofoil ), r * ( exp(psiA) - exp(-psiA) ) * sin(thetaAerofoil) );
-        z = std::complex( (r + extraR ) * cos(thetaAerofoil) + displac.real(), (r + extraR ) * sin(thetaAerofoil) + displac.imag());
-
-        seta = joukowskyTransform(z, shape);
-
-        thetaAerofoil += PI / resolution;
-        fileOut << seta.real() << " " << seta.imag() << "\n";
-        fileOut2 << z.real() << " " << z.imag() << "\n";
+    if(j == 0)
+    {
+        theta = beta[i][0][R] - beta[i][1][R];
+    }
+    if(j == 1)
+    {
+        theta = alpha[i][1][R] - alpha[i+1][0][R];
     }
 
-    // fileOut2 << "\n";
+    radius = hub_radi[i][j] + dr * R;
+    double discharge1, discharge2, dischargeX1, dischargeX2;
+    //getting the abscissa and ordinates
+    for( double thetaAerofoil = 0.0 * PI; thetaAerofoil <= 2.0 *  PI;)
+    {
+        disX = psiA - psiC * cos(thetaAerofoil);
 
-    // for( double thetaAerofoil = 0.0; thetaAerofoil <= 2.0 *  PI;)
-    // {
-    //     z = std::complex( (r ) * cos(thetaAerofoil) , (r ) * sin(thetaAerofoil));
-    //     thetaAerofoil += PI / resolution;
-    //     fileOut2 << z.real() << " " << z.imag() << "\n";
-    // }
+        // for(int repeat = 0; repeat < 5; repeat++)
+        // {        
+        displac = std::complex( disX , getDisplacementY( liftCoefficient[i][j][R], theta, disX, radius ) );
+        extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
 
-    // xAerofoil = 2 * scaleAerofoil * coshl( psiAerofoil ) * cos( thetaAerofoil );
-    // yAerofoil = 2 * scaleAerofoil * sinhl( psiAerofoil ) * sin( thetaAerofoil );
+        dummyF = std::complex( extraR * cos( 2.0 * PI - 0 * PI / resolution) + displac.real(), extraR * sin(2.0 * PI - 0 * PI / resolution) + displac.imag());
+        dummyAerofoil = joukowskyTransform(dummyF, shape, 0.0);
+        discharge1 = dummyAerofoil.imag();
+        dischargeX1 = dummyAerofoil.real();
+        dummyF = std::complex( extraR * cos( 2.0 * PI - 1 * PI / resolution) + displac.real(), extraR * sin(2.0 * PI - 1 * PI / resolution) + displac.imag());
+        dummyAerofoil = joukowskyTransform(dummyF, shape, 0.0);
+        discharge2 = dummyAerofoil.imag(); 
+        dischargeX2 = dummyAerofoil.real();
+        dischargeAngle[i][j][R] = atan2(  discharge2 - discharge1  , fabs( dischargeX2 - dischargeX1 ) ) * RadToDegree;
 
-    // thetaAerofoil
-    // yAerofoil = 2 * scaleAerofoil * sinhl( psiAerofoil ) * sin( thetaAerofoil );
+        if( j == 0)
+        {
+        rotateAngle[i][j][R] = beta[i][1][R] - dischargeAngle[i][j][R];
+        incidenceAngle[i][j][R] = beta[i][0][R] - rotateAngle[i][j][R];
+        }
+        if( j == 1)
+        {
+        rotateAngle[i][j][R] = alpha[i+1][0][R] - dischargeAngle[i][j][R];
+        incidenceAngle[i][j][R] = alpha[i][1][R] - rotateAngle[i][j][R];
+        }
 
+        //}
+
+
+
+
+
+
+        thetaC = std::complex<double>( 0.0 , rotateAngle[i][j][R] / RadToDegree);
+
+        F = std::complex( extraR * cos(thetaAerofoil) + displac.real(), extraR * sin(thetaAerofoil) + displac.imag());
+
+        aerofoil = joukowskyTransform(F, shape, thetaC);
+
+        thetaAerofoil += 2 * PI / resolution;
+
+
+        blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius );
+    }
+
+    }
+
+    blockMeshGen::generateStl(resolution);
+    
     
 }
 
@@ -968,9 +1027,14 @@ double func_real(double x, double y) override
     return ( x * ( dummyChord - x ) ) / ( y * pow( ( dummyChord - 2 * dummyMaxCamPos ) , 2 ) / ( 4 * pow( dummyMaxCam , 2 ) ) + ( dummyChord - 2 * dummyMaxCamPos ) * x / dummyMaxCam - ( ( pow( dummyChord , 2 )  ) - 4 * dummyMaxCamPos * dummyChord ) / ( 4 * dummyMaxCam ) );
 }
 
-std::complex<double> joukowskyTransform(std::complex<double> z, double shape)
+std::complex<double> joukowskyTransform(std::complex<double> z, double shape, std::complex<double> thetaC)
 {
-    return ( z + pow(shape,2) / z );
+    return exp(thetaC) * ( z + pow(shape,2) / z );
+}
+
+double getDisplacementY(double Cl, double alpha, double dX, double radius)
+{
+    return pow(  pow( sin(  asin( -0.5 * Cl / PI  )  ) - alpha / RadToDegree  , 2 ) * ( radius - pow( dX , 2 ) ) / (  1 - pow(  sin(  asin( -0.5 * Cl / PI ) - alpha / RadToDegree )  , 2  )  ) , 0.5 );
 }
 
 };
@@ -1010,7 +1074,7 @@ int main()
     double omega_1 = 3250; //3250
     double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
-    double resol = 150; 
+    double resol = 50; 
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;
@@ -1022,7 +1086,7 @@ int main()
     test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
-    int f = 0;
+    int f = 1;
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
@@ -1033,6 +1097,7 @@ int main()
     // {
     // test.getBladeAngles(i,f);
     // }
+    test.getAerofoilTD(0,f);
     //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();

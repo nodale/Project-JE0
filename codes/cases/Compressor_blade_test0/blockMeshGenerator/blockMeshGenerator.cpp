@@ -90,14 +90,14 @@ void blockMeshGen::generateStl(int resolution)
 {
     //calculate normal
     std::vector<std::vector<double>> tempValue;
-    std::vector<std::vector<double>> tempLine;
+    double tempLine[2][3];
     double tempPerpendicular[3];
     double tempNormal[3];
     double tempLength;
     int quotient; 
 
     int dummyRes = resolution + 1;
-
+    out << "solid blade\n";
     std::vector<std::vector<double>> tempVertices;
 
     // tempVertices.push_back(vertices[resolution + 2]);
@@ -106,8 +106,7 @@ void blockMeshGen::generateStl(int resolution)
     // tempVertices.push_back(vertices[1]);
     
 
-    out << "solid Blade\n";
-    for(int d = 0; d < vertices.size(); d++)
+    for(int d = 0; d < vertices.size() - (resolution + 2); d++)
     {
         for(int l = 0; l < 2; l++)
         {
@@ -133,12 +132,12 @@ void blockMeshGen::generateStl(int resolution)
             //     }
             // }
 
-            // if( remainder( d - resolution, dummyRes) != 0  )
+            // if( remainder( d - 1, resolution) != 0  )
             // {
                 if(l == 0)
-                {
+                {   
                     tempValue.clear();
-                    tempValue.push_back(vertices[d+resolution]);
+                    tempValue.push_back(vertices[d+resolution+1]);
                     tempValue.push_back(vertices[d+1]);
                     tempValue.push_back(vertices[d]);
                 }
@@ -146,15 +145,12 @@ void blockMeshGen::generateStl(int resolution)
                 if(l == 1)
                 {
                     tempValue.clear();
+                    tempValue.push_back(vertices[d+resolution+ 2]);
+                    tempValue.push_back(vertices[d+1]); 
                     tempValue.push_back(vertices[d+resolution+1]);
-                    tempValue.push_back(vertices[d+1]);
-                    tempValue.push_back(vertices[d+resolution]);
                 }
-            //}
+            //} 
             
-            // tempLine.reserve(2);
-            // tempLine[0].reserve(3);
-            // tempLine[1].reserve(3);
 
 
             //need to fix this
@@ -166,6 +162,7 @@ void blockMeshGen::generateStl(int resolution)
                     {
                         tempValue[e][f] = 0.0;
                     }
+
                 }
             }
             
@@ -192,7 +189,7 @@ void blockMeshGen::generateStl(int resolution)
             
             for(int i = 0; i < 3; i++)
             {
-            out << "vertex " << tempValue[i][0] * 1000 << " " << tempValue[i][1] * 1000 << " " << tempValue[i][2] * 1000 << "\n";
+            out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
             }
 
             out << "endloop\n" << "endfacet\n";
@@ -211,12 +208,37 @@ void blockMeshGen::generateStl(int resolution)
             // }            
         
         }
-
+    
     }
 
+vertices.clear();    
 }
 
 void blockMeshGen::clear()
 {
     vertices.clear();
+}
+
+void blockMeshGen::generateSnappy()
+{
+    std::ofstream output("CPD/snappyHexMeshDict");
+
+    output << "Foamfile\n";
+    output << "{\n";
+    output << " version     2.0;\n";
+    output << " format      ascii;\n";
+    output << " class       dictionary;\n";
+    output << " object      autoHexMeshDict;\n";
+    output << "}\n";
+
+    output << "castellatedMesh  true;\n"; 
+
+    output << "geometry\n";
+    output << "{\n";
+    output << " blade.stl\n";
+    output << " {\n";
+    output << "     type triSurfaceMesh;\n";
+    output << "     name blade;\n";
+    output << " }\n";
+    output << "}\n";   
 }
