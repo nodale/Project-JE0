@@ -1037,6 +1037,13 @@ double getDisplacementY(double Cl, double alpha, double dX, double radius)
     return pow(  pow( sin(  asin( -0.5 * Cl / PI  )  ) - alpha / RadToDegree  , 2 ) * ( radius - pow( dX , 2 ) ) / (  1 - pow(  sin(  asin( -0.5 * Cl / PI ) - alpha / RadToDegree )  , 2  )  ) , 0.5 );
 }
 
+double getBladeDist(int i, int j, double radius)
+{
+    double dist = chord[i][j] / solidity[i];
+
+    return dist * ( radius / mean_radi[i][j] );
+}
+
 };
 
 int main()
