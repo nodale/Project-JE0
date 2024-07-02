@@ -13,13 +13,15 @@
 #include <complex>
 
 #define e 2.718281828459045
-#define PI 3.14159265
+//#define PI 3.14159265
 #define RadToDegree 57.29577951
 #define Cp 1004.5
 #define gamma 1.4
 
 //TODO
 //potential flow analysis for the airofil and its lift coefficient
+
+constexpr double PI = 3.14159265;
 
 class Blade : public solver1, public blockMeshGen
 {
@@ -943,51 +945,38 @@ void getAerofoilTD(int i, int j)
             // }
             //     fileOut << " " << std::endl;
 
-            for(double gh = -PI ; gh <= 0.0 ;)
+            for(double gh = -(double)PI ; gh <= 0.0;)
             {
-
                 dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh ) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
                 //fileOut << aerofoil.real() << " " << aerofoil.imag() + lk * getBladeDist(i, j, radius) / dummyScale << std::endl;
-                if(gh <= -PI + threshold)
-                {
-                    blockMeshGen::collectBoundary( (-0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
-                }
-                if(gh >= -threshold)
-                {
-                    blockMeshGen::collectBoundary( (0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
-                }
-                if( gh <= -threshold && gh >= -PI + threshold )
-                {               
-                blockMeshGen::collectBoundary( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
-                }
+                // if(gh <= -PI + threshold)
+                // {
+                //     blockMeshGen::collectBoundary( (-0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
+                // }
+                // if(gh >= -threshold)
+                // {
+                //     blockMeshGen::collectBoundary( (0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
+                // }
+                // if( gh <= -threshold && gh >= -PI + threshold )
+                // {               
+                // blockMeshGen::collectBoundary( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
+                // }
+                
+                blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
 
-                gh += 2 * (PI) / resolution;
+                gh += 2 * (double)  PI / resolution;
             }
 
-            for(double gh = 0.0 ; gh >= -PI ;)
+            for(double gh = 0.0 ; gh >= -(double)PI;)
             {
-
                 dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh ) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                //fileOut << aerofoil.real() << " " << aerofoil.imag() + lk * getBladeDist(i, j, radius) / dummyScale << std::endl;
-                if(gh <= -PI + threshold)
-                {
-                    blockMeshGen::collectBoundary( (-0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 -  getBladeDist(i, j, radius), radius );
-                }
-                if(gh >= -threshold)
-                {
-                    blockMeshGen::collectBoundary( (0.125 * tempW + aerofoil.real() ) * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 -  getBladeDist(i, j, radius), radius );
-                }
-                if( gh <= -threshold && gh >= -PI + threshold )
-                {               
-                blockMeshGen::collectBoundary( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
-                }
-                
+                blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
 
-                gh -= 2 * (PI) / resolution;
+                gh -= 2 * (double)  PI / resolution;
             }
 
             // std::cin.get();
@@ -1014,6 +1003,9 @@ void getAerofoilTD(int i, int j)
     }
     blockMeshGen::generateStl(resolution);
     blockMeshGen::generateBoundary(resolution);
+    blockMeshGen::generateInlet(resolution);
+    blockMeshGen::generateOutlet(resolution);
+    blockMeshGen::generateBot(resolution);
     
     
 }
