@@ -20,9 +20,9 @@ void blockMeshGen::generateVertices()
     std::string begin = "vertices\n(\n";
     out << begin;
 
-    for(int i = 0; i < vertices.size();)
+    for(int i = 0; i < boundary.size();)
     {
-        out << "( " << vertices[i][0] << " " << vertices[i][1] << " " << vertices[i][2] << " )\n";
+        out << "( " << boundary[i][0] << " " << boundary[i][1] << " " << boundary[i][2] << " )\n";
         i += 2;
         //+=2 because we want to use the vertices inbetween for arc interpolation
     }
@@ -37,9 +37,9 @@ void blockMeshGen::generateEdges()
     out << begin;
     int edgeNum = 0;
 
-    for(int i = 1; i < vertices.size();)
+    for(int i = 1; i < boundary.size();)
     {
-        out << "arc " << edgeNum << " " << edgeNum + 1 << " ( " << vertices[i][0] << " " << vertices[i][1] << " " << vertices[i][2] << " )\n";
+        out << "arc " << edgeNum << " " << edgeNum + 1 << " ( " << boundary[i][0] << " " << boundary[i][1] << " " << boundary[i][2] << " )\n";
         edgeNum += 1;
         i += 2;
         //+=2 because we want to use the vertices inbetween for arc interpolation
@@ -54,7 +54,7 @@ void blockMeshGen::generateBlocks()
     std::string begin = "blocks\n(\n";
     out << begin;
     out << "hex ( ";
-    for(int i = 1; i < vertices.size(); i++)
+    for(int i = 1; i < boundary.size(); i++)
     {
         out << i << " ";
     }
@@ -164,13 +164,8 @@ void blockMeshGen::generateStl(int resolution)
     //                 out << "endloop\n" << "endfacet\n";         
                 
     //         }
+    std::cout << "blade is generated\n";
 
-vertices.clear();    
-}
-
-void blockMeshGen::clear()
-{
-    vertices.clear();
 }
 
 void blockMeshGen::collectBoundary(double x, double y, double r)
@@ -258,6 +253,7 @@ void blockMeshGen::generateBoundary(int resolution)
             out << "endloop\n" << "endfacet\n";         
         
     }
+    std::cout << "boundary is generated\n";
 }
 
 
@@ -279,6 +275,7 @@ void blockMeshGen::generateSnappy()
     output << "{\n";
     output << " blade.stl\n";
     output << " {\n";
+
     output << "     type triSurfaceMesh;\n";
     output << "     name blade;\n";
     output << " }\n";
@@ -371,12 +368,15 @@ void blockMeshGen::generateFacesVerticesB(int resolution)
             if( remainder(d + 1 + resolution / 2, ( resolution ) ) == 0 )
             {
                 tempValue.clear();
-                continue;
+                tempValue.push_back(boundary[d+resolution+2]);
+                tempValue.push_back(boundary[d+1]); 
+                tempValue.push_back(boundary[d+resolution+1]);
+                skip = 0;
             }
 
             if( remainder(d + 2 + resolution / 2, ( resolution ) ) == 0)
             {
-               tempValue.clear();
+                tempValue.clear();
                 tempValue.push_back(boundary[d+resolution+1]);
                 tempValue.push_back(boundary[d+1]);
                 tempValue.push_back(boundary[d]);
@@ -597,6 +597,8 @@ void blockMeshGen::generateInlet(int resolution)
             out << "endloop\n" << "endfacet\n";         
         }
 
+    std::cout << "inlet is generated\n";
+
 }
 
 void blockMeshGen::generateOutlet(int resolution)
@@ -673,6 +675,7 @@ void blockMeshGen::generateOutlet(int resolution)
             out << "endloop\n" << "endfacet\n";         
         }
 
+    std::cout << "outlet is generated\n";
 
 }
 
@@ -683,25 +686,45 @@ void blockMeshGen::generateBot(int resolution)
 
     out << "solid bot\n";
 
-    for(int d = 0; d <= resolution - 1; d++)
+    /* bool skip = 1;
+    for(int d = 1; d <= resolution - 2; d++)
     {
         for(int l = 0; l < 2; l++)
         {
-            if(l == 0 )
+            skip = 1;
+            if(d == resolution / 2 - 1)
             {
+                if(l == 0)
+                {
                 tempValue.clear();
-                tempValue.push_back(boundary[d]);
-                tempValue.push_back(vertices[d+1]);
+                tempValue.push_back(vertices[resolution / 2]);
+                tempValue.push_back(boundary[resolution / 2 - 1]);
+                tempValue.push_back(vertices[resolution / 2 - 1]);
+                skip = 0;
+                }
+                if(l == 1)
+                {
+                tempValue.clear();
+                tempValue.push_back(boundary[resolution / 2 - 1]);
+                tempValue.push_back(vertices[resolution / 2]);
+                tempValue.push_back(boundary[resolution / 2 - 0]); 
+                skip = 0;
+                }
+            }
+            if(l == 0 && skip == 1)
+            {   
+                tempValue.clear();
                 tempValue.push_back(vertices[d]);
+                tempValue.push_back(boundary[d+1]);
+                tempValue.push_back(boundary[d]);
             }
 
-            if(l == 1 ) 
+            if(l == 1 && skip == 1) 
             {
-
                 tempValue.clear();
-                tempValue.push_back(boundary[d+1]);
-                tempValue.push_back(boundary[d]); 
                 tempValue.push_back(vertices[d+1]);
+                tempValue.push_back(boundary[d+1]);
+                tempValue.push_back(vertices[d]); 
             }
 
             for(int e = 0; e < 2; e++)
@@ -744,6 +767,374 @@ void blockMeshGen::generateBot(int resolution)
 
             out << "endloop\n" << "endfacet\n";  
         }    
-    }   
+    } 
+
+    for(int l = 0; l < 3; l++)
+    {
+        if(l == 0)
+        {   
+            tempValue.clear();
+            tempValue.push_back(vertices[resolution - 0]);
+            tempValue.push_back(boundary[resolution - 1]);
+            tempValue.push_back(vertices[resolution - 1]);
+        }
+
+        if(l == 1)  
+        {
+
+            tempValue.clear();
+            tempValue.push_back(vertices[1]);  
+            tempValue.push_back(boundary[resolution - 1]);
+            tempValue.push_back(vertices[resolution - 0]); 
+        }
+
+        if(l == 2) 
+        {
+            tempValue.clear();
+            tempValue.push_back(boundary[resolution - 1]); 
+            tempValue.push_back(vertices[1]);
+            tempValue.push_back(boundary[1]);
+        }
+
+        for(int e = 0; e < 2; e++)
+        {
+            for(int f = 0; f < 3; f++)
+            {
+                if(std::isnan(tempValue[e][f]) == 1)
+                {
+                    tempValue[e][f] = 0.0;
+                }
+
+            }
+        }
+        
+        for(int i = 0; i < 3; i++)
+        {
+            tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+            tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+        }
+        
+        tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+        tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+        tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+        tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+
+        for(int i = 0; i < 3; i++)
+        {
+            tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+        }
+
+        out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+        //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+        out << "outer loop\n";
+        
+        for(int i = 0; i < 3; i++)
+        {
+        out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+        }
+
+        out << "endloop\n" << "endfacet\n";  
+    }  
+    std::cout << "bottom boundary is generated\n"; */
+
+    for(int d = 0; d < resolution - 1; d++)
+    {
+
+        
+        for(int l = 0; l < 2; l++)
+        {  
+
+            if(l == 1)
+            {   
+                tempValue.clear();
+                tempValue.push_back(boundary[resolution - d - 1]);
+                tempValue.push_back(boundary[d+1]);
+                tempValue.push_back(boundary[d]);
+            }
+
+            if(l == 0)
+            {
+                tempValue.clear();
+                tempValue.push_back(boundary[resolution - d - 2]);
+                tempValue.push_back(boundary[d+1]); 
+                tempValue.push_back(boundary[resolution - d - 1]);
+            }
+            
+
+            for(int e = 0; e < 2; e++)
+            {
+                for(int f = 0; f < 3; f++)
+                {
+                    if(std::isnan(tempValue[e][f]) == 1)
+                    {
+                        tempValue[e][f] = 0.0;
+                    }
+
+                }
+            }
+            
+            for(int i = 0; i < 3; i++)
+            {
+                tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+                tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+            }
+            
+            tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+            tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+            tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+            tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+        
+            for(int i = 0; i < 3; i++)
+            {
+                tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+            }
+
+            out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+            //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+            out << "outer loop\n";
+            
+            for(int i = 0; i < 3; i++)
+            {
+            out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+            }
+
+            out << "endloop\n" << "endfacet\n";         
+        }
+    
+    }
+    std::cout << "bot boundary is generated\n";
+
+}
+
+void blockMeshGen::generateTop(int resolution)
+{
+    out.close();
+    out.open("top.stl");
+
+    out << "solid top\n";
+
+    int limitB = boundary.size() - resolution - 0;  
+
+    /* bool skip = 1;
+    for(int d = 1; d <= resolution - 2; d++)
+    {
+        for(int l = 0; l < 2; l++)
+        {
+            skip = 1;
+            if(d == resolution / 2 - 1)
+            {
+                if(l == 0)
+                {
+                tempValue.clear();
+                tempValue.push_back(vertices[limitS + resolution / 2]);
+                tempValue.push_back(boundary[limitB + resolution / 2 - 1]);
+                tempValue.push_back(vertices[limitS + resolution / 2 - 1]);
+                skip = 0;
+                }
+                if(l == 1)
+                {
+                tempValue.clear();
+                tempValue.push_back(boundary[limitB + resolution / 2 - 1]);
+                tempValue.push_back(vertices[limitS + resolution / 2]);
+                tempValue.push_back(boundary[limitB + resolution / 2 - 0]); 
+                skip = 0;
+                }
+            }
+            if(l == 0 && skip == 1)
+            {   
+                tempValue.clear();
+                tempValue.push_back(vertices[limitS + d]);
+                tempValue.push_back(boundary[limitB + d+1]);
+                tempValue.push_back(boundary[limitB + d]);
+            }
+
+            if(l == 1 && skip == 1) 
+            {
+                tempValue.clear();
+                tempValue.push_back(vertices[limitS + d+1]);
+                tempValue.push_back(boundary[limitB + d+1]);
+                tempValue.push_back(vertices[limitS + d]); 
+            }
+
+            for(int e = 0; e < 2; e++)
+            {
+                for(int f = 0; f < 3; f++)
+                {
+                    if(std::isnan(tempValue[e][f]) == 1)
+                    {
+                        tempValue[e][f] = 0.0;
+                    }
+
+                }
+            }
+            
+            for(int i = 0; i < 3; i++)
+            {
+                tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+                tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+            }
+            
+            tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+            tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+            tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+            tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+
+            for(int i = 0; i < 3; i++)
+            {
+                tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+            }
+
+            out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+            //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+            out << "outer loop\n";
+            
+            for(int i = 0; i < 3; i++)
+            {
+            out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+            }
+
+            out << "endloop\n" << "endfacet\n";  
+        }    
+    } 
+
+    for(int l = 0; l < 3; l++)
+    {
+        if(l == 0)
+        {   
+            tempValue.clear();
+            tempValue.push_back(vertices[limitS + resolution - 0]);
+            tempValue.push_back(boundary[limitB + resolution - 1]);
+            tempValue.push_back(vertices[limitS + resolution - 1]);
+        }
+
+        if(l == 1)  
+        {
+
+            tempValue.clear();
+            tempValue.push_back(vertices[limitS + 1]);  
+            tempValue.push_back(boundary[limitB + resolution - 1]);
+            tempValue.push_back(vertices[limitS + resolution - 0]); 
+        }
+
+        if(l == 2) 
+        {
+            tempValue.clear();
+            tempValue.push_back(boundary[limitB + resolution - 1]); 
+            tempValue.push_back(vertices[limitS + 1]);
+            tempValue.push_back(boundary[limitB + 1]);
+        }
+
+        for(int e = 0; e < 2; e++)
+        {
+            for(int f = 0; f < 3; f++)
+            {
+                if(std::isnan(tempValue[e][f]) == 1)
+                {
+                    tempValue[e][f] = 0.0;
+                }
+
+            }
+        }
+        
+        for(int i = 0; i < 3; i++)
+        {
+            tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+            tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+        }
+        
+        tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+        tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+        tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+        tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+
+        for(int i = 0; i < 3; i++)
+        {
+            tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+        }
+
+        out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+        //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+        out << "outer loop\n";
+        
+        for(int i = 0; i < 3; i++)
+        {
+        out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+        }
+
+        out << "endloop\n" << "endfacet\n";  
+    }   */
+
+    for(int d = 0; d < resolution - 1; d++)
+    {
+
+        
+        for(int l = 0; l < 2; l++)
+        {  
+
+            if(l == 1)
+            {   
+                tempValue.clear();
+                tempValue.push_back(boundary[limitB + resolution - d - 1]);
+                tempValue.push_back(boundary[limitB + d+1]);
+                tempValue.push_back(boundary[limitB + d]);
+            }
+
+            if(l == 0)
+            {
+                tempValue.clear();
+                tempValue.push_back(boundary[limitB + resolution - d - 2]);
+                tempValue.push_back(boundary[limitB + d+1]); 
+                tempValue.push_back(boundary[limitB + resolution - d - 1]);
+            }
+            
+
+            for(int e = 0; e < 2; e++)
+            {
+                for(int f = 0; f < 3; f++)
+                {
+                    if(std::isnan(tempValue[e][f]) == 1)
+                    {
+                        tempValue[e][f] = 0.0;
+                    }
+
+                }
+            }
+            
+            for(int i = 0; i < 3; i++)
+            {
+                tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+                tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+            }
+            
+            tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+            tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+            tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+            tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+        
+            for(int i = 0; i < 3; i++)
+            {
+                tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+            }
+
+            out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+            //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";
+            out << "outer loop\n";
+            
+            for(int i = 0; i < 3; i++)
+            {
+            out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+            }
+
+            out << "endloop\n" << "endfacet\n";         
+        }
+    
+    }
+
+    std::cout << "top boundary is generated\n";
 
 }
