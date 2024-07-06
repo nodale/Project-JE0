@@ -819,7 +819,7 @@ void getAerofoilTD(int i, int j)
     std::complex<double> z, seta, thetaC, displac, F, aerofoil, dummyF, dummyAerofoil, dummyF1[2], dummyAero1[2];
     double potentialC, streamC, Gamma;
 
-    double multiplier = 4.0;
+    double multiplier = 1.0;
     double unmultiplier = 1.0;
 
     //enter the displacement of the circle
@@ -925,30 +925,30 @@ void getAerofoilTD(int i, int j)
                 
                 //fileOut << aerofoil.real() << " " << aerofoil.imag() << std::endl;
                 
-                blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius );
+                blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius - hub_radi[i][j] );
 
                 gh += 2.0 * ( PI ) / (double)resolution / multiplier;
             }
 
-            for(double gh = -PI ; gh <= 0.0;)
-            {
-                gh += unmultiplier * 2.0 * PI / resolution;
+            // for(double gh = -PI ; gh <= 0.0;)
+            // {
+            //     gh += unmultiplier * 2.0 * PI / resolution;
 
-                dummyF = std::complex( extraR * cos( gh * 0.9  - 0.2 * (double)resolution) / backFat + displac.real(), extraR * sin(gh * 0.9 - 0.2 * (double)resolution ) / backFat + displac.imag());
-                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+            //     dummyF = std::complex( extraR * cos( gh * 0.9  - 0.2 * (double)resolution) / backFat + displac.real(), extraR * sin(gh * 0.9 - 0.2 * (double)resolution ) / backFat + displac.imag());
+            //     aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
-            }
+            //     blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 +  getBladeDist(i, j, radius), radius );
+            // }
 
-            for(double gh = -PI ; gh <= 0.0;)
-            {
-                gh += unmultiplier * 2.0 * PI / resolution;
+            // for(double gh = -PI ; gh <= 0.0;)
+            // {
+            //     gh += unmultiplier * 2.0 * PI / resolution;
                 
-                dummyF = std::complex( extraR * cos( (-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.real(), extraR * sin((-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.imag());
-                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+            //     dummyF = std::complex( extraR * cos( (-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.real(), extraR * sin((-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.imag());
+            //     aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
-            }
+            //     blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
+            // }
 
             if(R == 0 or R == resolution - 0)
             {
@@ -956,27 +956,27 @@ void getAerofoilTD(int i, int j)
                 dummyF = std::complex( extraR * cos( -PI ) / backFat + displac.real(), extraR * sin(-PI) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius - hub_radi[i][j] );
 
                 dummyF = std::complex( extraR * cos( 0.0 ) / backFat + displac.real(), extraR * sin(0.0) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
-                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius - hub_radi[i][j] );
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius - hub_radi[i][j] );
             
                 
                 dummyF = std::complex( extraR * cos( -PI ) / backFat + displac.real(), extraR * sin(-PI) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius - hub_radi[i][j] );
             
 
 
                 dummyF = std::complex( extraR * cos( -0.5 * PI ) / backFat + displac.real(), extraR * sin(-0.5 * PI) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
                 
-                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
-                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius - hub_radi[i][j] );
+                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius - hub_radi[i][j] );
 
 
             }
@@ -1018,11 +1018,13 @@ void getAerofoilTD(int i, int j)
     blockMeshGen::generateBoundaries();
     blockMeshGen::generateBlocks();
 
-    blockMeshGen::generateBoundaryFile();
+    //blockMeshGen::generateBoundaryFile();
     blockMeshGen::generateSnappy();
     blockMeshGen::generateSurfaceFeature();
-
     blockMeshGen::generateCreatePatch();
+    blockMeshGen::generateControlDict();
+
+    blockMeshGen::generateObj(resolution);
     
     
 }
@@ -1208,7 +1210,7 @@ int main()
     double omega_1 = 3250; //3250
     double omega_2 = 5600; //5600
     //resolution only works best with X50; where X is any integer
-    double resol = 50; 
+    double resol = 150; 
     double v1 = 69.4377418988;
     double v2 =  v1;
     double Temp = 300;

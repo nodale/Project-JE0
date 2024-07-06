@@ -49,11 +49,15 @@ void generateOutlet(int resolution);
 void generateTop(int resolution);
 void generateBot(int resolution);
 
+//generate an obj file
+void generateObj(int resolution);
+
 void getSeparationVector(double input);
 
 //still in work, for snappyHexMesh
 void generateSnappy();
 void generateCreatePatch();
+void generateControlDict();
 
 void clear();
 
@@ -64,5 +68,5 @@ void generateFacesVerticesB(int resolution);
 void generateFacesVerticesBCombined(int resolution);
 
 void printCoordinates();
-
+void printCoordinatesObj(std::ofstream& obj);
 };

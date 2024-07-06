@@ -14,18 +14,10 @@ addLayers        false;
 
 geometry
 {
-   blade.stl
+   blade
    {
        type triSurfaceMesh;
-       name aerofoil;
-
-       regions
-       {
-           blade
-           {
-               name bladeSolid;
-            }
-       }
+       file "blade.stl";
    }
 }
 
@@ -33,42 +25,24 @@ castellatedMeshControls
 {
    maxGlobalCells 2000000;
    maxLocalCells 100000;
-   minRefinementCells 0;
+   minRefinementCells 100;
    nCellsBetweenLevels 1;
    maxLoadUnbalance 0.10;
 
    features
    (
-       {
-       file "blade.eMesh";
-       level 0;
-       }
    );
 
 
    refinementSurfaces
    {
-       aerofoil
+       blade
        {
-           level (0 0);
-           regions
+           level (2 2);
+           patchInfo
            {
-               blade
-               {
-                   level (0 0);
-                   patchInfo
-                   {
-                       type wall;
-                   }
-               }
+               type wall;
            }
-           faceZone    aerofoil;
-           faceType    boundary;
-           cellZone    aerofoil;
-           cellZoneInside  inside;
-
-
-
        }
    }
 
@@ -77,18 +51,18 @@ castellatedMeshControls
    {
    }
 
-   resolveFeatureAngle 10;
-
+   resolveFeatureAngle 30;
+   locationInMesh  (0 0 0.01);
    allowFreeStandingZoneFaces true;
 }
 
-
+   cleanMesh true;
 
 snapControls
 {
    nSmoothPatch 3;
    tolerance 2.0;
-   nSolveIter 300;
+   nSolveIter 30;
    nRelaxIter 5;
    nFeatureSnapIter 10;
 
@@ -136,13 +110,15 @@ addLayersControls
    nLayerIter 50;
    nRelaxIter 5;
    nLayerIter 20;
+   cleanMesh true;
+
 
 }
 
 
 meshQualityControls
 {
-   maxConcave 360;
+   maxConcave 160;
    maxNonOrtho 75;
    minVol 1e-13;
    minDeterminant 0.001;
@@ -161,6 +137,18 @@ meshQualityControls
 
 }
 
-mergeTolerance 1e-00;
 
+
+
+
+
+
+
+
+
+
+
+
+mergeTolerance 1e-02;
+debug 3;
 

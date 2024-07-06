@@ -1,0 +1,156 @@
+FoamFile
+{
+   version     2.0;
+   format      ascii;
+   class       dictionary;
+   object      snappyHexMeshDict;
+}
+
+
+
+castellatedMesh  true;
+snap             true;
+addLayers        false;
+
+geometry
+{
+   blade
+   {
+       type triSurfaceMesh;
+       file "blade.stl";
+   }
+}
+
+castellatedMeshControls
+{
+   maxGlobalCells 20000000;
+   maxLocalCells 1000000;
+   minRefinementCells 100;
+   nCellsBetweenLevels 1;
+   maxLoadUnbalance 0.10;
+
+   features
+   (
+   );
+
+
+   refinementSurfaces
+   {
+       blade
+       {
+           level (2 4);
+           patchInfo
+           {
+               type wall;
+           }
+       }
+   }
+
+
+   refinementRegions
+   {
+   }
+
+   resolveFeatureAngle 30;
+   locationInMesh  (0 0 0);
+   allowFreeStandingZoneFaces true;
+}
+
+   cleanMesh true;
+
+snapControls
+{
+   nSmoothPatch 3;
+   tolerance 2.0;
+   nSolveIter 30;
+   nRelaxIter 5;
+   nFeatureSnapIter 10;
+
+   implicitFeatureSnap     false;
+   explicitFeatureSnap     true;
+   multiRegionFeatureSnap  false;
+
+}
+
+
+
+addLayersControls
+{
+    layers
+    {
+       bladesolid
+       {
+           nSurfaceLayers 3;
+       }
+    }
+
+
+
+
+   nBufferCellsNoExtrude 0;
+   maxFaceThicknessRatio 0.5;
+   nGrow 0;
+
+   nSmoothThickness 8;
+   nSmoothNormals 2;
+   meanMedianAxisAngle 90;
+   nSmoothSurfaceNormals 1;
+   maxThicknessToMedialRatio   0.3;
+
+
+
+
+   slipFeatureAngle 30;
+   featureAngle 130;
+   minThickness 0.0004;
+   finalLayerThickness 0.6;
+   expansionRatio 1.02;
+   relativeSizes true;
+
+   nLayerIter 50;
+   nRelaxIter 5;
+   nLayerIter 20;
+   cleanMesh true;
+
+
+}
+
+
+meshQualityControls
+{
+   maxConcave          180;
+   maxNonOrtho         180;
+   minVol              1e-13;
+   minDeterminant      0.001;
+   minFaceWeight       0.05;
+   minVolRatio         0.01;
+   minVolCollapseRatio 0.1;
+   minEdgeLength       -1;
+   minTetQuality       -1e-15;
+   minArea             -1;
+   minVol              -1e-15;
+   maxInternalSkewness 4;
+   maxBoundarySkewness 20;
+   minTwist            -1;
+   minTriangleTwist    -1;
+   nSmoothScale        4;
+   errorReduction      0.75;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+mergeTolerance 1e-02;
+debug 3;
+

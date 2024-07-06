@@ -12,7 +12,7 @@ blade.stl
    extractionMethod    extractFromSurface;
    extractFromSurfaceCoeffs
    {
-       includedAngle 360;
+       includedAngle 180;
    }
 
    subsetFeatures
