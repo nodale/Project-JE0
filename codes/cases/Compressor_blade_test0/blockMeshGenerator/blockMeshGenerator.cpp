@@ -1,13 +1,20 @@
 #include "blockMeshGenerator.h"
 #include <cmath>
+#include <iomanip>
+#include <ios>
+#include <limits>
 
 void blockMeshGen::init(char* target)
 {
     out.open(target);
+    bmD.open("boundary/blockMeshDict");
+    bmB.open("boundary/boundary");
+
 
     //enable the following two for blockMesh
-    //char entry[]= "FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       dictionary;\n    object      blockMeshDict;\n}\n\n\n";
-    //out << entry;
+    char entry[]= "FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       dictionary;\n    object      blockMeshDict;\n}\n\n\n\n\n";
+    bmD << entry;
+    bmD << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10);
 }
 
 void blockMeshGen::collectVertices(double x, double y, double r)
@@ -15,74 +22,196 @@ void blockMeshGen::collectVertices(double x, double y, double r)
     vertices.insert(vertices.end(),{ x, y, r});
 }
 
+void blockMeshGen::collectBrick(double x, double y, double r)
+{
+    brick.insert(brick.end(),{ x, y, r});
+}
+
+void blockMeshGen::collectInterpolate(double x, double y, double r)
+{
+    interpolatePoints.insert(interpolatePoints.end(),{ x, y, r});
+}
+
+void blockMeshGen::printCoordinates()
+{
+    // std::vector<std::vector<float>> tempCheck(tempValue.size());
+    // std::transform(tempValue.begin(), tempValue.end(), tempCheck.begin(), [](const std::vector<double>& vec) {
+    //                    std::vector<float> vecF(vec.size());
+    //                    std::transform(vec.begin(), vec.end(), vecF.begin(),
+    //                                   [](double val) { return static_cast<float>(val); });
+    //                    return vecF;
+    //                });
+
+    // if(tempCheck[0] == tempCheck[1] or tempCheck[0] == tempCheck[2] or tempCheck[1] == tempCheck[2])
+    // {
+    //     std::cout << "collapsed a face\n";
+    //     return;
+    // }
+
+    for(int e = 0; e < 2; e++)
+    {
+        for(int f = 0; f < 3; f++)
+        {
+            if(std::isnan(tempValue[e][f]) == 1)
+            {
+                tempValue[e][f] = 0.0;
+            }
+
+        }
+    }
+    
+    for(int i = 0; i < 3; i++)
+    {
+        tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
+        tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
+    }
+    
+    tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
+    tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
+    tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
+
+    tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
+
+    for(int i = 0; i < 3; i++)
+    {
+        tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
+    }
+
+    out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
+    //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";vv
+    out << "outer loop\n";
+    
+    for(int i = 0; i < 3; i++)
+    {
+    out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
+    }
+
+    out << "endloop\n" << "endfacet\n";
+}
+
 void blockMeshGen::generateVertices()
 {
     std::string begin = "vertices\n(\n";
-    out << begin;
+    bmD << begin;
 
-    for(int i = 0; i < boundary.size();)
+    for(int i = brick.size() - 1; i >= 0;)
     {
-        out << "( " << boundary[i][0] << " " << boundary[i][1] << " " << boundary[i][2] << " )\n";
-        i += 2;
+        bmD << "    ( " << brick[i][0] << " " << brick[i][1] << " " << brick[i][2] << " )\n";
+        i -= 1;
         //+=2 because we want to use the vertices inbetween for arc interpolation
     }
 
     std::string end = ");\n\n";
-    out << end;
+    bmD << end;
 }
 
 void blockMeshGen::generateEdges()
 {
     std::string begin = "edges\n(\n";
-    out << begin;
+    bmD << begin;
     int edgeNum = 0;
 
-    for(int i = 1; i < boundary.size();)
-    {
-        out << "arc " << edgeNum << " " << edgeNum + 1 << " ( " << boundary[i][0] << " " << boundary[i][1] << " " << boundary[i][2] << " )\n";
-        edgeNum += 1;
-        i += 2;
-        //+=2 because we want to use the vertices inbetween for arc interpolation
-    }
+    // for(int i = 1; i < boundary.size();)
+    // {
+    //     bmD << "arc " << edgeNum << " " << edgeNum + 1 << " ( " << boundary[i][0] << " " << boundary[i][1] << " " << boundary[i][2] << " )\n";
+    //     edgeNum += 1;
+    //     i += 2;
+    //     //+=2 because we want to use the vertices inbetween for arc interpolation
+    // }
+    
+    // for(int i = 0; i <= 4; i++)
+    // {
+    //     bmD << "arc " << 0 << " " << 1 << " ( " << interpolatePoints[i][0] << " " << interpolatePoints[i][1] << " " << interpolatePoints[i][2] << " )\n";   
+    // }
+
+    bmD << "arc " << 6 << " " << 7 << " ( " << interpolatePoints[0][0] << " " << interpolatePoints[0][1] << " " << interpolatePoints[0][2] << " )\n";
+    bmD << "arc " << 4 << " " << 5 << " ( " << interpolatePoints[1][0] << " " << interpolatePoints[1][1] << " " << interpolatePoints[1][2] << " )\n";
+
+    bmD << "arc " << 2 << " " << 3 << " ( " << interpolatePoints[2][0] << " " << interpolatePoints[2][1] << " " << interpolatePoints[2][2] << " )\n";
+    bmD << "arc " << 0 << " " << 1 << " ( " << interpolatePoints[3][0] << " " << interpolatePoints[3][1] << " " << interpolatePoints[3][2] << " )\n";
+
 
     std::string end = ");\n\n";
-    out << end;
+    bmD << end;
 }
 
 void blockMeshGen::generateBlocks()
 {
     std::string begin = "blocks\n(\n";
-    out << begin;
-    out << "hex ( ";
-    for(int i = 1; i < boundary.size(); i++)
-    {
-        out << i << " ";
-    }
+    bmD << begin;
+    bmD << "hex ( 0 1 2 3 4 5 6 7";
 
-    out << " ) blade \n";
+    bmD << " ) boundary \n";
     //numbers of cells in each direction, x y r
-    out << "( 20 15 10 )\n";
+    bmD << "( 40 40 40 )\n";
     //cell expansion ratios
-    out << "simpleGrading ( 0.5 1 1 )\n";
+    bmD << "simpleGrading ( 2 2 1 )\n";
 
-    std::string end = "     );\n\n";
-    out << end;
+    std::string end = ");\n\n";
+    bmD << end;
 }
 
 void blockMeshGen::generateBoundaries()
 {
     std::string begin = "boundary\n(\n";
-    out << begin;
-    out << "    ( \n";
-    out << "        blade\n";
-    out << "        {\n";
-    out << "            type wall\n";
-    out << "        }\n";
-    out << "    )\n";
+    bmD << begin;
+    bmD << "        inlet\n"
+     "        {\n"
+     "            type outletInlet;\n"
+     "            faces\n"
+     "            (\n"
+     "                   ( 0 3 4 7 )\n"
+     "            );\n"
+     "         }\n\n"
+     "        outlet\n"
+     "        {\n"
+     "            type outletInlet;\n"
+     "            faces\n"
+     "            (\n"
+     "                   ( 1 2 5 6 )\n"
+     "            );\n"
+     "         }\n\n"
+     "        casing\n"
+     "        {\n"
+     "            type wall;\n"
+     "            faces\n"
+     "            (\n"
+     "                   ( 0 1 2 3 )\n"
+     "                   ( 4 5 6 7 )\n"
+     "            );\n"
+     "         }\n\n"
+     "        cyclic1\n"
+     "        {\n"
+     "            type              wall;\n"
+    //  "            inGroups          1(cyclic);\n"
+    //  "            matchTolerance    0.002;\n"
+    //  "            neighbourPatch    cyclic2;\n"
+    //  "            transform         rotational;\n"
+    //  "            rotationAxis      (0 0 1);\n"
+    //  "            rotationCentre    (0 0 0);\n"
+     "            faces\n"
+     "            (\n"
+     "                   ( 0 1 4 5 )\n"
+     "            );\n"
+     "         }\n\n"
+     "        cyclic2\n"
+     "        {\n"
+     "            type              wall;\n"
+    //  "            inGroups          1(cyclic);\n"
+    //  "            matchTolerance    0.002;\n"
+    //  "            neighbourPatch    cyclic1;\n"
+    //  "            transform         rotational;\n"
+    //  "            rotationAxis      (0 0 1);\n"
+    //  "            rotationCentre    (0 0 0);\n"
+     "            faces\n"
+     "            (\n"
+    "                   ( 2 3 6 7 )\n"
+    "            );\n"
+    "         }\n\n";
     
 
-    std::string end = "     );\n\n";
-    out << end;
+    std::string end = ");\n\n";
+    bmD << end;
 }
 
 void blockMeshGen::generateStl(int resolution)
@@ -168,6 +297,77 @@ void blockMeshGen::generateStl(int resolution)
 
 }
 
+void blockMeshGen::generateCreatePatch()
+{
+    std::ofstream output("boundary/createPatchDict");
+
+    output << "FoamFile\n"
+    "{\n"
+    "   version     2.0;\n"
+    "   format      ascii;\n"
+    "   class       dictionary;\n"
+    "   object      createPatchDict;\n"
+    "}\n\n"
+    "\n"
+    "pointSync      false;\n" 
+    "\n" 
+    "patches\n" 
+    "(\n" 
+    "   {\n" 
+    "       name            cyclicFace1;\n" 
+    "       constructFrom   patches;\n" 
+    "\n" 
+    "       patchInfo\n" 
+    "       {\n" 
+    "           type            cyclic;\n" 
+    "           matchTolerance  0.01;\n" 
+    "           neighbourPatch  cyclicFace2;\n" 
+    "           transform       rotational;\n" 
+    "           rotationAxis    (0 0 1);\n" 
+    "           rotationCentre  (0 0 0);\n" 
+    "\n" 
+    "       }\n" 
+    "\n" 
+    "   patches (cyclic1);\n" 
+    "\n" 
+    "   set         cyclicFace1;\n" 
+    "   }\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+        "   {\n" 
+    "       name            cyclicFace2;\n" 
+    "       constructFrom   patches;\n" 
+    "\n" 
+    "       patchInfo\n" 
+    "       {\n" 
+    "           type            cyclic;\n" 
+    "           matchTolerance  0.01;\n" 
+    "           neighbourPatch  cyclicFace1;\n" 
+    "           transform       rotational;\n" 
+    "           rotationAxis    (0 0 1);\n" 
+    "           rotationCentre  (0 0 0);\n" 
+    "\n" 
+    "       }\n" 
+    "\n" 
+    "   patches (cyclic2);\n" 
+    "\n" 
+    "   set         cyclicFace2;\n" 
+    "   }\n" "\n" 
+    "\n" 
+    ");\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+    "\n" 
+    "\n"; 
+
+
+}
+
 void blockMeshGen::collectBoundary(double x, double y, double r)
 {
     boundary.insert(boundary.end(), { x, y, r });
@@ -176,7 +376,7 @@ void blockMeshGen::collectBoundary(double x, double y, double r)
 void blockMeshGen::generateBoundary(int resolution)
 {
     out.close();
-    out.open("boundary.stl");
+    out.open("stl/boundary.stl");
 
     out << "solid boundary\n";
 
@@ -256,30 +456,262 @@ void blockMeshGen::generateBoundary(int resolution)
     std::cout << "boundary is generated\n";
 }
 
+void blockMeshGen::generateBoundaryFile()
+{
+    char entry[]= "FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       polyBoundaryMesh;\n    object      blockMeshDict;\n}\n\n\n";
+    bmB << entry;
+
+    bmB << "5\n"
+    "(";
+    bmB << 
+    "    inlet\n"
+    "    {\n"
+    "       type            outletIntlet;\n"
+    "       outletValue     (2, 2, 2);\n"
+    "       value           2;\n"
+    "    }\n"
+    "    outlet\n"
+    "    {\n"
+    "       type            outletInlet;\n"
+    "       outletValue     (2,2,2);\n"
+    "       value           2;\n"
+    "    }\n"
+    "    casing\n"
+    "    {\n"
+    "       type            wall;\n"
+    "       nFaces          50;\n"
+    "       startFace       10325;\n"
+    "    }\n"
+    "    cyclic1\n"
+    "    {\n"
+    "       type            cyclic;\n"
+    "       nFaces          50;\n"
+    "       startFace       10350;\n"
+    "       matchTolerance  0.15;\n"
+    "       neighbourPatch  cyclic2;\n"
+    "    }\n"
+    "    cyclic2\n"
+    "    {\n"
+    "       type            cyclic;\n"
+    "       nFaces          50;\n"
+    "       startFace       10375;\n"
+    "       matchTolerance  0.15;\n"
+    "       neighbourPatch  cyclic1;\n"
+    "    }\n"
+    ")";
+
+
+
+}
 
 void blockMeshGen::generateSnappy()
 {
     std::ofstream output("CPD/snappyHexMeshDict");
 
-    output << "Foamfile\n";
-    output << "{\n";
-    output << " version     2.0;\n";
-    output << " format      ascii;\n";
-    output << " class       dictionary;\n";
-    output << " object      autoHexMeshDict;\n";
-    output << "}\n";
+    output << "FoamFile\n"
+    "{\n"
+    "   version     2.0;\n"
+    "   format      ascii;\n"
+    "   class       dictionary;\n"
+    "   object      snappyHexMeshDict;\n"
+    "}\n\n"
+    "\n"  
+    "\n"  
+    "castellatedMesh  true;\n" 
+    "snap             false;\n" 
+    "addLayers        false;\n\n" 
+    "geometry\n"
+    "{\n"
+    "   blade.stl\n"
+    "   {\n"
+    "       type triSurfaceMesh;\n"
+    "       name aerofoil;\n"
+    "\n"  
+    "       regions\n"  
+    "       {\n"
+    "           blade\n"  
+    "           {\n"  
+    "               name bladeSolid;\n"  
+    "            }\n"  
+    "       }\n"  
+    "   }\n"
+    "}\n"
+    "\n"  
+    "castellatedMeshControls\n"  
+    "{\n"
+    "   maxGlobalCells 2000000;\n"  
+    "   maxLocalCells 100000;\n"  
+    "   minRefinementCells 0;\n"  
+    "   nCellsBetweenLevels 1;\n"
+    "   maxLoadUnbalance 0.10;\n"  
+    "\n"  
+    "   features\n"  
+    "   (\n"  
+    "       {\n"  
+    "       file \"blade.eMesh\";\n"  
+    "       level 0;\n"  
+    "       }\n"  
+    "   );\n"  
+    "\n"  
+    "\n"  
+    "   refinementSurfaces\n"  
+    "   {\n"  
+    "       aerofoil\n"  
+    "       {\n"  
+    "           level (0 0);\n"  
+    "           regions\n"  
+    "           {\n"  
+    "               blade\n"
+    "               {\n"  
+    "                   level (0 0);\n"  
+    "                   patchInfo\n"  
+    "                   {\n"
+    "                       type wall;\n"  
+    "                   }\n"  
+    "               }\n"  
+    "           }\n"  
+    "           faceZone    aerofoil;\n"  
+    "           faceType    boundary;\n"  
+    "           cellZone    aerofoil;\n"  
+    "           cellZoneInside  inside;\n"  
+    "\n"  
+    "\n"  
+    "\n"  
+    "       }\n"  
+    "   }\n"  
+    "\n" 
+    "\n"  
+    "   refinementRegions\n"  
+    "   {\n"   
+    "   }\n"  
+    "\n"  
+    "   resolveFeatureAngle 10;\n"  
+    "\n"    
+    "   allowFreeStandingZoneFaces true;\n"
+    "}\n"  
+    "\n"
+    "\n"
+    "\n"
+    "snapControls\n"
+    "{\n"
+    "   nSmoothPatch 3;\n"
+    "   tolerance 2.0;\n"
+    "   nSolveIter 300;\n"
+    "   nRelaxIter 5;\n"
+    "   nFeatureSnapIter 10;\n"
+    "\n"  
+    "   implicitFeatureSnap     false;\n"  
+    "   explicitFeatureSnap     true;\n"  
+    "   multiRegionFeatureSnap  false;\n"  
+    "\n"  
+    "}\n"
+    "\n"
+    "\n"
 
-    output << "castellatedMesh  true;\n"; 
+    "\n"
+    "addLayersControls\n"  
+    "{\n"  
+    "    layers\n"  
+    "    {\n"  
+    "       bladesolid\n"
+    "       {\n"  
+    "           nSurfaceLayers 3;\n"  
+    "       }\n"  
+    "    }\n"  
+    "\n"  
+    "\n"  
+    "\n"  
+    "\n"  
+    "   nBufferCellsNoExtrude 0;\n"  
+    "   maxFaceThicknessRatio 0.5;\n"  
+    "   nGrow 0;\n"  
+    "\n"  
+    "   nSmoothThickness 8;\n"  
+    "   nSmoothNormals 2;\n"
+    "   meanMedianAxisAngle 90;\n"  
+    "   nSmoothSurfaceNormals 1;\n"  
+    "   maxThicknessToMedialRatio   0.3;\n"  
+    "\n"  
+    "\n"  
+    "\n"  
+    "\n"  
+    "   slipFeatureAngle 30;\n"  
+    "   featureAngle 130;\n"  
+    "   minThickness 0.0004;\n" 
+    "   finalLayerThickness 0.6;\n"  
+    "   expansionRatio 1.02;\n"  
+    "   relativeSizes true;\n"  
+    "\n"  
+    "   nLayerIter 50;\n"  
+    "   nRelaxIter 5;\n"  
+    "   nLayerIter 20;\n"  
+    "\n"  
+    "}\n"  
+    "\n"  
+    "\n"
+    "meshQualityControls\n"
+    "{\n"
+    "   maxConcave 360;\n"
+    "   maxNonOrtho 75;\n"
+    "   minVol 1e-13;\n"
+    "   minDeterminant 0.001;\n"
+    "   minFaceWeight 0.05;\n"
+    "   minVolRatio 0.01;\n"
+    "   minTetQuality 1e-06;\n"  
+    "   minArea 1e-30;\n"  
+    "   minVol 1e-30;\n"  
+    "   maxInternalSkewness 4;\n"  
+    "   maxBoundarySkewness 20;\n"  
+    "   minTwist -1;\n"  
+    "   minTriangleTwist -1;\n"  
+    "   nSmoothScale 4;\n"  
+    "   errorReduction 0.75;\n"  
+    "\n"  
+    "\n"  
+    "}\n"
+    "\n"
+    "mergeTolerance 1e-00;\n"
+    "\n"
+    "\n";
 
-    output << "geometry\n";
-    output << "{\n";
-    output << " blade.stl\n";
-    output << " {\n";
 
-    output << "     type triSurfaceMesh;\n";
-    output << "     name blade;\n";
-    output << " }\n";
-    output << "}\n";   
+
+
+}
+
+void blockMeshGen::generateSurfaceFeature()
+{
+    out.close();
+    out.open("boundary/surfaceFeatureExtractDict");
+
+    out << "\n"
+    "FoamFile\n"
+    "{\n"
+    "   version     2.0;\n"
+    "   format      ascii;\n"
+    "   class       dictionary;\n"
+    "   object      surfaceFeatureExtractDict;\n"
+    "}\n\n"
+    "blade.stl\n"  
+    "{\n"  
+    "   extractionMethod    extractFromSurface;\n"  
+    "   extractFromSurfaceCoeffs\n"  
+    "   {\n"  
+    "       includedAngle 360;\n"  
+    "   }\n"  
+    "\n"  
+    "   subsetFeatures\n"  
+    "   {\n"  
+    "       nonManifoldEdges    yes;\n"  
+    "       openEdges           yes;\n"  
+    "   }\n"  
+    "   writeObj    yes;\n"  
+    "}\n"; 
+}
+
+void blockMeshGen::getSeparationVector(double input)
+{
+    separationVector = input;
 }
 
 void blockMeshGen::generateFacesVerticesS(int resolution)
@@ -320,38 +752,74 @@ void blockMeshGen::generateFacesVerticesS(int resolution)
                 }
             }
             
-            for(int i = 0; i < 3; i++)
-            {
-                tempLine[0][i] = tempValue[1][i] - tempValue[0][i]; 
-                tempLine[1][i] = tempValue[2][i] - tempValue[0][i]; 
-            }
-            
-            tempPerpendicular[0] = tempLine[0][1] * tempLine[1][2] - tempLine[0][2] * tempLine[1][1];
-            tempPerpendicular[1] = tempLine[0][2] * tempLine[1][0] - tempLine[0][0] * tempLine[1][2];
-            tempPerpendicular[2] = tempLine[0][1] * tempLine[1][0] - tempLine[0][0] * tempLine[1][1];
-
-            tempLength = sqrt( tempPerpendicular[0]*tempPerpendicular[0] + tempPerpendicular[1]*tempPerpendicular[1] + tempPerpendicular[2]*tempPerpendicular[2] );
-        
-            for(int i = 0; i < 3; i++)
-            {
-                tempNormal[i] = fabs(tempPerpendicular[i] / tempLength);
-            }
-
-            out << "facet normal " << tempNormal[0] << " " << tempNormal[1] << " " << tempNormal[2] << "\n";
-            //out << "facet normal " << 0 << " " << 0 << " " << 0 << "\n";vv
-            out << "outer loop\n";
-            
-            for(int i = 0; i < 3; i++)
-            {
-            out << "vertex " << tempValue[i][0] << " " << tempValue[i][1] << " " << tempValue[i][2] << "\n";
-            }
-
-            out << "endloop\n" << "endfacet\n";
+            printCoordinates();
          
         
         }
     
     }
+
+    int limitB = vertices.size() - resolution -1;
+    for(int d = 0; d < resolution - 0; d++)
+    {
+        for(int l = 0; l < 2; l++)
+        {
+
+                if(l == 0 && remainder(d + 0 , resolution/2) != 0)
+                {   
+                    tempValue.clear();
+                    tempValue.push_back(vertices[limitB + d]);
+                    tempValue.push_back(vertices[limitB - d + resolution]);
+                    tempValue.push_back(vertices[limitB + d+1]);
+                }
+
+                if(l == 1 && remainder(d + 1 , resolution/2) != 0)
+                {
+                    tempValue.clear();
+                    tempValue.push_back(vertices[limitB + d+1]); 
+                    tempValue.push_back(vertices[limitB - d + resolution]);
+                    tempValue.push_back(vertices[limitB - d + resolution - 1]);
+                }
+            
+
+            printCoordinates();
+         
+        }
+    
+    }
+
+    limitB = 0;
+    for(int d = 1; d < resolution - 1; d++)
+    {
+
+        for(int l = 0; l < 2; l++)
+        {
+
+                if(l == 0 && remainder(d + 0 , resolution/2) != 0)
+                {   
+                    tempValue.clear();
+                    tempValue.push_back(vertices[limitB - d + resolution]);
+                    tempValue.push_back(vertices[limitB + d]);
+                    tempValue.push_back(vertices[limitB + d+1]);
+                }
+
+                if(l == 1 && remainder(d + 1 , resolution/2) != 0)
+                {
+                    tempValue.clear();
+                    tempValue.push_back(vertices[limitB - d + resolution]);
+                    tempValue.push_back(vertices[limitB + d+1]); 
+                    tempValue.push_back(vertices[limitB - d + resolution - 1]);
+                }
+            
+
+            printCoordinates();
+         
+        }
+    
+    }
+
+    out << "endsolid blade\n";
+
 }
 
 void blockMeshGen::generateFacesVerticesB(int resolution)
@@ -467,7 +935,7 @@ void blockMeshGen::generateFacesVerticesB(int resolution)
 void blockMeshGen::generateInlet(int resolution)
 {
     out.close();
-    out.open("inlet.stl");
+    out.open("stl/inlet.stl");
 
     out << "solid inlet\n";
 
@@ -604,7 +1072,7 @@ void blockMeshGen::generateInlet(int resolution)
 void blockMeshGen::generateOutlet(int resolution)
 {
     out.close();
-    out.open("outlet.stl");
+    out.open("stl/outlet.stl");
 
     out << "solid outlet\n";
 
@@ -682,7 +1150,7 @@ void blockMeshGen::generateOutlet(int resolution)
 void blockMeshGen::generateBot(int resolution)
 {
     out.close();
-    out.open("bot.stl");
+    out.open("stl/bot.stl");
 
     out << "solid bot\n";
 
@@ -911,7 +1379,7 @@ void blockMeshGen::generateBot(int resolution)
 void blockMeshGen::generateTop(int resolution)
 {
     out.close();
-    out.open("top.stl");
+    out.open("stl/top.stl");
 
     out << "solid top\n";
 

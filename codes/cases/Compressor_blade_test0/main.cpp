@@ -322,7 +322,7 @@ void init()
     mean_radi[i][j] = 0.5 * ( tip_radi[i][j] + hub_radi[i][j] );
     }
 
-    solidity[i] = ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] );
+    solidity[i] = ( 1.5 * psi[i] ) / fabs( 1.55 * phi[i] - psi[i] );
 
     double vu1_r = VX[0] * tan( meanAlpha[i][0] / RadToDegree );
     // approach 1
@@ -344,7 +344,7 @@ void init()
 
     chord[i][0] = solidity[i] * 2 * PI * mean_radi[i][0] / numBlades[i][0];
     chord[i][1] = solidity[i] * 2 * PI * mean_radi[i][1] / numBlades[i][1];
-    
+    std::cout << solidity[i] << std::endl;
     a[i] = 0.5 * ( vu1_r + vu2_r );
     b[i] = 0.5 * ( vu2_r - vu1_r );
     }
@@ -803,7 +803,7 @@ void clear()
 
 void getAerofoilTD(int i, int j)
 {
-    char filename[] = "blade.stl"; //for blockMesh : blockMeshDict
+    char filename[] = "stl/blade.stl"; //for blockMesh : blockMeshDict
     blockMeshGen::init(filename);
 
     double r, shape, extraR;
@@ -818,6 +818,9 @@ void getAerofoilTD(int i, int j)
     //defining the complex equation
     std::complex<double> z, seta, thetaC, displac, F, aerofoil, dummyF, dummyAerofoil, dummyF1[2], dummyAero1[2];
     double potentialC, streamC, Gamma;
+
+    double multiplier = 4.0;
+    double unmultiplier = 1.0;
 
     //enter the displacement of the circle
 
@@ -924,12 +927,12 @@ void getAerofoilTD(int i, int j)
                 
                 blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius );
 
-                gh += 0.01 * 2.0 * ( PI ) / (double)resolution;
+                gh += 2.0 * ( PI ) / (double)resolution / multiplier;
             }
 
             for(double gh = -PI ; gh <= 0.0;)
             {
-                gh += 2.0 * PI / resolution;
+                gh += unmultiplier * 2.0 * PI / resolution;
 
                 dummyF = std::complex( extraR * cos( gh * 0.9  - 0.2 * (double)resolution) / backFat + displac.real(), extraR * sin(gh * 0.9 - 0.2 * (double)resolution ) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
@@ -939,7 +942,7 @@ void getAerofoilTD(int i, int j)
 
             for(double gh = -PI ; gh <= 0.0;)
             {
-                gh += 2.0 * PI / resolution;
+                gh += unmultiplier * 2.0 * PI / resolution;
                 
                 dummyF = std::complex( extraR * cos( (-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.real(), extraR * sin((-PI - gh) * 0.9  - 0.2 * (double)resolution ) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
@@ -947,8 +950,40 @@ void getAerofoilTD(int i, int j)
                 blockMeshGen::collectBoundary( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
             }
 
+            if(R == 0 or R == resolution - 0)
+            {
+                std::complex<double> dummyG;
+                dummyF = std::complex( extraR * cos( -PI ) / backFat + displac.real(), extraR * sin(-PI) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+                
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
+
+                dummyF = std::complex( extraR * cos( 0.0 ) / backFat + displac.real(), extraR * sin(0.0) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+                
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+            
+                
+                dummyF = std::complex( extraR * cos( -PI ) / backFat + displac.real(), extraR * sin(-PI) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+                
+                blockMeshGen::collectBrick( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+            
+
+
+                dummyF = std::complex( extraR * cos( -0.5 * PI ) / backFat + displac.real(), extraR * sin(-0.5 * PI) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R] ) / RadToDegree);
+                
+                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 - getBladeDist(i, j, radius), radius );
+                blockMeshGen::collectInterpolate( 1.25 * aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0 + getBladeDist(i, j, radius), radius );
+
+
+            }
+
             // std::cin.get();
             // std::cout << "received\n";
+
             break;
 
         }
@@ -969,12 +1004,25 @@ void getAerofoilTD(int i, int j)
     }
 
     }
-    blockMeshGen::generateStl(100*resolution);
-    blockMeshGen::generateBoundary(resolution);
-    blockMeshGen::generateInlet(resolution);
-    blockMeshGen::generateOutlet(resolution);
-    blockMeshGen::generateBot(resolution);
-    blockMeshGen::generateTop(resolution);
+    blockMeshGen::generateStl(multiplier*resolution);
+    // blockMeshGen::generateBoundary(resolution/unmultiplier);
+    // blockMeshGen::generateInlet(resolution/unmultiplier);
+    // blockMeshGen::generateOutlet(resolution/unmultiplier);
+    // blockMeshGen::generateBot(resolution/unmultiplier);
+    // blockMeshGen::generateTop(resolution/unmultiplier);
+
+    // blockMeshGen::getSeparationVector(getBladeDist(i, j, mean_radi[i][j]));
+
+    blockMeshGen::generateVertices();
+    blockMeshGen::generateEdges();
+    blockMeshGen::generateBoundaries();
+    blockMeshGen::generateBlocks();
+
+    blockMeshGen::generateBoundaryFile();
+    blockMeshGen::generateSnappy();
+    blockMeshGen::generateSurfaceFeature();
+
+    blockMeshGen::generateCreatePatch();
     
     
 }

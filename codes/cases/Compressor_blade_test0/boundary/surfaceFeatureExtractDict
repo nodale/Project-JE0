@@ -1,0 +1,24 @@
+
+FoamFile
+{
+   version     2.0;
+   format      ascii;
+   class       dictionary;
+   object      surfaceFeatureExtractDict;
+}
+
+blade.stl
+{
+   extractionMethod    extractFromSurface;
+   extractFromSurfaceCoeffs
+   {
+       includedAngle 360;
+   }
+
+   subsetFeatures
+   {
+       nonManifoldEdges    yes;
+       openEdges           yes;
+   }
+   writeObj    yes;
+}

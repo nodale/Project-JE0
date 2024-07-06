@@ -1,0 +1,166 @@
+FoamFile
+{
+   version     2.0;
+   format      ascii;
+   class       dictionary;
+   object      snappyHexMeshDict;
+}
+
+
+
+castellatedMesh  true;
+snap             false;
+addLayers        false;
+
+geometry
+{
+   blade.stl
+   {
+       type triSurfaceMesh;
+       name aerofoil;
+
+       regions
+       {
+           blade
+           {
+               name bladeSolid;
+            }
+       }
+   }
+}
+
+castellatedMeshControls
+{
+   maxGlobalCells 2000000;
+   maxLocalCells 100000;
+   minRefinementCells 0;
+   nCellsBetweenLevels 1;
+   maxLoadUnbalance 0.10;
+
+   features
+   (
+       {
+       file "blade.eMesh";
+       level 0;
+       }
+   );
+
+
+   refinementSurfaces
+   {
+       aerofoil
+       {
+           level (0 0);
+           regions
+           {
+               blade
+               {
+                   level (0 0);
+                   patchInfo
+                   {
+                       type wall;
+                   }
+               }
+           }
+           faceZone    aerofoil;
+           faceType    boundary;
+           cellZone    aerofoil;
+           cellZoneInside  inside;
+
+
+
+       }
+   }
+
+
+   refinementRegions
+   {
+   }
+
+   resolveFeatureAngle 10;
+
+   allowFreeStandingZoneFaces true;
+}
+
+
+
+snapControls
+{
+   nSmoothPatch 3;
+   tolerance 2.0;
+   nSolveIter 300;
+   nRelaxIter 5;
+   nFeatureSnapIter 10;
+
+   implicitFeatureSnap     false;
+   explicitFeatureSnap     true;
+   multiRegionFeatureSnap  false;
+
+}
+
+
+
+addLayersControls
+{
+    layers
+    {
+       bladesolid
+       {
+           nSurfaceLayers 3;
+       }
+    }
+
+
+
+
+   nBufferCellsNoExtrude 0;
+   maxFaceThicknessRatio 0.5;
+   nGrow 0;
+
+   nSmoothThickness 8;
+   nSmoothNormals 2;
+   meanMedianAxisAngle 90;
+   nSmoothSurfaceNormals 1;
+   maxThicknessToMedialRatio   0.3;
+
+
+
+
+   slipFeatureAngle 30;
+   featureAngle 130;
+   minThickness 0.0004;
+   finalLayerThickness 0.6;
+   expansionRatio 1.02;
+   relativeSizes true;
+
+   nLayerIter 50;
+   nRelaxIter 5;
+   nLayerIter 20;
+
+}
+
+
+meshQualityControls
+{
+   maxConcave 360;
+   maxNonOrtho 75;
+   minVol 1e-13;
+   minDeterminant 0.001;
+   minFaceWeight 0.05;
+   minVolRatio 0.01;
+   minTetQuality 1e-06;
+   minArea 1e-30;
+   minVol 1e-30;
+   maxInternalSkewness 4;
+   maxBoundarySkewness 20;
+   minTwist -1;
+   minTriangleTwist -1;
+   nSmoothScale 4;
+   errorReduction 0.75;
+
+
+}
+
+mergeTolerance 1e-00;
+
+

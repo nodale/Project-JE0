@@ -1,0 +1,45 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    object      blockMeshDict;
+}
+
+
+5
+(    inlet
+    {
+       type            outletIntlet;
+       outletValue     (2, 2, 2);
+       value           2;
+    }
+    outlet
+    {
+       type            outletInlet;
+       outletValue     (2,2,2);
+       value           2;
+    }
+    casing
+    {
+       type            wall;
+       nFaces          50;
+       startFace       10325;
+    }
+    cyclic1
+    {
+       type            cyclic;
+       nFaces          50;
+       startFace       10350;
+       matchTolerance  0.15;
+       neighbourPatch  cyclic2;
+    }
+    cyclic2
+    {
+       type            cyclic;
+       nFaces          50;
+       startFace       10375;
+       matchTolerance  0.15;
+       neighbourPatch  cyclic1;
+    }
+)
