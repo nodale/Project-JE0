@@ -143,9 +143,19 @@ void blockMeshGen::generateBlocks()
 
     bmD << " ) boundary \n";
     //numbers of cells in each direction, x y r
-    bmD << "( 70 70 50 )\n";
-    //cell expansion ratios
-    bmD << "simpleGrading ( 2 2 2 )\n";
+    bmD << "( 40 40 20 )\n";
+    //cell expansion, more on the x axis
+    bmD << "simpleGrading\n"
+    "(\n"
+    "   1\n"
+    "   (\n"
+    "       ( 0.3   0.2   0.2 )\n"
+    "       ( 0.4   0.6   1.0 )\n"
+    "       ( 0.3   0.2   5.0 )\n"
+    "   )\n"
+    "   1\n"
+    ")\n";
+
 
     std::string end = ");\n\n";
     bmD << end;
@@ -615,7 +625,7 @@ void blockMeshGen::generateSnappy()
     "\n"  
     "\n"  
     "castellatedMesh  true;\n" 
-    "snap             false;\n" 
+    "snap             true;\n" 
     "addLayers        false;\n\n" 
     "geometry\n"
     "{\n"
@@ -630,7 +640,7 @@ void blockMeshGen::generateSnappy()
     "{\n"
     "   maxGlobalCells 20000000;\n"  
     "   maxLocalCells 1000000;\n"  
-    "   minRefinementCells 100;\n"  
+    "   minRefinementCells 20;\n"  
     "   nCellsBetweenLevels 2;\n"
     "   maxLoadUnbalance 0.10;\n"  
     "\n"  
@@ -643,7 +653,7 @@ void blockMeshGen::generateSnappy()
     "   {\n"  
     "       blade\n"  
     "       {\n"  
-    "           level (3 8);\n"  
+    "           level (1 4);\n"  
     "           patchInfo\n"  
     "           {\n"
     "               type wall;\n"  
@@ -657,7 +667,7 @@ void blockMeshGen::generateSnappy()
     "   }\n"  
     "\n"  
     "   resolveFeatureAngle 10;\n"  
-    "   locationInMesh  (0 0 0);\n"    
+    "   locationInMesh  (0 0 0.001);\n"    
     "   allowFreeStandingZoneFaces true;\n"
     "}\n"  
     "\n"
@@ -782,15 +792,15 @@ void blockMeshGen::generateControlDict()
     "\n"
     "stopAt             endTime;\n"
     "\n"
-    "endTime            0.0;\n"
+    "endTime            10.0;\n"
     "\n"
     "writeControl       timeStep;\n"
     "\n"
-    "writeInterval      1;\n"
+    "writeInterval      10.0;\n"
     "\n"
-    "deltaT             0.01;\n"
+    "deltaT             10.0;\n"
     "\n"
-    "purgeWrite         0;\n"
+    "purgeWrite         1;\n"
     "\n"
     "writeFormat        ascii;\n"
     "\n"

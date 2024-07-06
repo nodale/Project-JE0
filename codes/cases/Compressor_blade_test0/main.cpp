@@ -19,7 +19,7 @@
 #define gamma 1.4
 
 //TODO
-//potential flow analysis for the airofil and its lift coefficient
+//extend THE BRICK
 
 constexpr double PI = 3.14159265;
 

@@ -25,8 +25,8 @@ castellatedMeshControls
 {
    maxGlobalCells 20000000;
    maxLocalCells 1000000;
-   minRefinementCells 100;
-   nCellsBetweenLevels 1;
+   minRefinementCells 20;
+   nCellsBetweenLevels 2;
    maxLoadUnbalance 0.10;
 
    features
@@ -38,7 +38,7 @@ castellatedMeshControls
    {
        blade
        {
-           level (2 4);
+           level (1 4);
            patchInfo
            {
                type wall;
@@ -51,8 +51,8 @@ castellatedMeshControls
    {
    }
 
-   resolveFeatureAngle 30;
-   locationInMesh  (0 0 0);
+   resolveFeatureAngle 10;
+   locationInMesh  (0 0 0.001);
    allowFreeStandingZoneFaces true;
 }
 
