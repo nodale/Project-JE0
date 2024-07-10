@@ -59,7 +59,7 @@ double PR[11];
 double R[11];
 double Area[11][3];
 double chord[11][2];
-double maxCam[11][2];
+double maxCam[11][2];       
 double maxCamPos[11][2];
 std::vector<double> liftCoefficient[11][2];
 std::vector<double> rotateAngle[11][2];
@@ -1217,6 +1217,8 @@ int main()
     double rho_ = 1.204;
     double Pres = 103.15;
 
+    system("./clear.sh");
+
     Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths);
 
     test.init();
@@ -1233,11 +1235,10 @@ int main()
     // {
     // test.getBladeAngles(i,f);
     // }
-    test.getAerofoilTD(1,f);
+    test.getAerofoilTD(0,f);
     //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();
-    
 
     return 0;
 }
