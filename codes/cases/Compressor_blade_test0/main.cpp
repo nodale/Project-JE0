@@ -19,7 +19,7 @@
 #define gamma 1.4
 
 //TODO
-//extend THE BRICK
+//fix solidity, maybe make an algorithm for it
 
 constexpr double PI = 3.14159265;
 
@@ -322,7 +322,7 @@ void init()
     mean_radi[i][j] = 0.5 * ( tip_radi[i][j] + hub_radi[i][j] );
     }
 
-    solidity[i] = ( 1.5 * psi[i] ) / fabs( 1.55 * phi[i] - psi[i] );
+    solidity[i] = fabs( ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] ) );
 
     double vu1_r = VX[0] * tan( meanAlpha[i][0] / RadToDegree );
     // approach 1
@@ -344,7 +344,7 @@ void init()
 
     chord[i][0] = solidity[i] * 2 * PI * mean_radi[i][0] / numBlades[i][0];
     chord[i][1] = solidity[i] * 2 * PI * mean_radi[i][1] / numBlades[i][1];
-    std::cout << solidity[i] << std::endl;
+    std::cout << solidity[i] << " " << ( 1.5 * psi[i] )  << " " << ( 1.55 * phi[i] - psi[i] ) << std::endl;
     a[i] = 0.5 * ( vu1_r + vu2_r );
     b[i] = 0.5 * ( vu2_r - vu1_r );
     }
@@ -1224,7 +1224,7 @@ int main()
     test.init();
     
     //angles are not available yet, need to initialise them for every r and stage
-    int f = 1;
+    int f = 0;
     for(int i = 0; i < 11; i++)
     {
     test.getFlowPaths(i);
@@ -1235,7 +1235,7 @@ int main()
     // {
     // test.getBladeAngles(i,f);
     // }
-    test.getAerofoilTD(0,f);
+    test.getAerofoilTD(8,f);
     //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();
