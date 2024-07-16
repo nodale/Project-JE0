@@ -4,5 +4,5 @@ plot '0.dat' with linespoints linetype -1 linewidth 2 lc rgb "#6194B",'1.dat' wi
 
 while(1){
 	replot
-	pause 1
+	pause 2
 }
