@@ -1571,7 +1571,7 @@ int main()
     // {                        
     // test.getBladeAngles(i,f);
     // }
-    //test.getAerofoilTD(3,f);
+    test.getAerofoilTD(3,f);
     //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();

@@ -10,7 +10,6 @@ void blockMeshGen::init(char* target)
     bmD.open("systemFile/blockMeshDict");
     bmB.open("boundary/boundary");
 
-
     //enable the following two for blockMesh
     char entry[]= "FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       dictionary;\n    object      blockMeshDict;\n}\n\n\n\n\n";
     bmD << entry;

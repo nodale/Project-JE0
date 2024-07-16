@@ -10,6 +10,7 @@ class blockMeshGen
 std::ofstream out;
 std::ofstream bmD;
 std::ofstream bmB;
+std::ofstream CFDFolder;
 
 std::vector<std::vector<double>> vertices;
 std::vector<std::vector<double>> boundary;
