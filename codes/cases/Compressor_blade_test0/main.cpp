@@ -12,6 +12,7 @@
 #include "blockMeshGenerator/blockMeshGenerator.h"
 #include <complex>
 #include <random>
+#include <algorithm>
 
 #define e 2.718281828459045
 //#define PI 3.14159265
@@ -220,7 +221,7 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
     {
         tip_radi[i] = tipP[i];
 
-        PR[i] = deltaP[i];
+        PR[i] = deltaP[i];  
         meanAlpha[i][0] = initial_alpha1[i];    
         R[i] = Reaction[i];
 
@@ -330,7 +331,6 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
     {
     mean_radi[0][i] = 0.5 * ( tip_radi[0][0] + hub_radi[0][0] );
     }
-
 
     //solidity[0] = ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] );
     // solidity[0][0] = 0.5 * ( ( tan(meanBeta[0][0]/RadToDegree) - tan(meanBeta[0][1]/RadToDegree) ) ) / ( ( diffusion[0][0] - ( 1.0 - ( cos(meanBeta[0][0]/RadToDegree) / cos( meanBeta[0][1]/RadToDegree ) ) ) ) / cos(meanBeta[0][0]/RadToDegree) ); 
@@ -1165,145 +1165,53 @@ void optimiseFlow(int j)
     double prevCl = 0.1;
     double dir1, dir2;
     double prevValue;
-    
-    u_int64_t limit = 1;
-    int limitCounter = 0;
+    int lowestRPM;   
+
+    sVec<int> suitableRPM;
+    sVec<double> liftCoefficientGradient;
 
     std::random_device rd1;
-    std::mt19937 gen1(rd1());
-    std::mt19937 gen2(rd1() + 1);
-    std::mt19937 gen3(rd1() + 2);
-    std::mt19937 gen4(rd1() + 3);
 
-    std::uniform_int_distribution<> distr1(50, 300);
-    std::uniform_int_distribution<> distr2(200, 450);
-    std::uniform_int_distribution<> distr3(-42, 42);
-    std::uniform_int_distribution<> distr4(105, 120);
+    std::uniform_int_distribution<> distr1(50, 400); //omega1
+    std::uniform_int_distribution<> distr2(200, 450); //omega2
+    std::uniform_int_distribution<> distr3(-30, 30); //alpha1 angles
+    std::uniform_int_distribution<> distr4(105, 120); //pressure ratios
 
-    if(j == 1)
+    for(int lda = 0; lda < 100; lda++)
     {
-        dir1 = 1.0;
-        dir2 = -1.0;
+
+    //monte-carlo to find a random combination
+    findCombinationOmega(j,suitableRPM, distr1, distr2, distr3, distr4);
+
+    //algorithm for finding the lowest rpm
+    //rerolling another random combination
+    omega1 = distr1(rd1) * 20;
+    omega2 = distr2(rd1) * 20;
+    int tempA = distr3(rd1) * 2;
+    double tempB = (double)distr4(rd1) / 100.0;
+    for(int m = 0; m < lowSize; m++)
+    {
+        //PR[m] = tempB;
+        meanAlpha[m][0] = distr3(rd1);
+
     }
-    if(j == 0)
+    tempA = distr3(rd1) * 2;
+    for(int m = lowSize; m < totalSize; m++)
     {
-        dir1 = 1.0;
-        dir2 = -1.0;
+        //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+        meanAlpha[m][0] = distr3(rd1);
+    }
     }
 
-    for(int inf = 0; inf < totalSize; inf++)
-    {
-        limit *= ( 13 + 1 );
-    }
+    findCombinationAlpha(j, liftCoefficientGradient, distr3);
 
-    // for(int k = 0; k < 1; k++)
-    // {
-
-    for(int i = 0; i < totalSize ; i++)
-    {
-
-    for(int r = 0; r <= resolution; r++)
-    {
-
-    while(true)
-    {               
-    if(j == 0)
-    {
-
-    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
-    }
-    if(j == 1)          
-    {
-    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
-    }
+    lowestRPM = std::min_element(suitableRPM.begin(), suitableRPM.end())[0];
     
-    lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
-    lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
-    
-    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
-    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
-
-    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
-    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
-
-    liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
-    liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
-
-    if(theta >= 0.72 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0)
-    {
-        std::cout << "stage " << i << " passes\n";      
-
-        break;
-    }
-    else                                        
-    {           
-
-        // if(i < 3)
-        // {
-        //     omega1 += 10;
-        //     std::cout << "error, restarting stage " << i << " with omega1 =  " << omega1 << "\n";
-        // }
-        // if(i >= 3)
-        // {
-        //     omega2 += 10;
-        //     std::cout << "error, restarting stage " << i << "  with omega2 =  " << omega2 << "\n";
-        // }
-
-        // if(omega1 > 10000 or omega2 > 10000)
-        // {
-        //     std::cout << "configuration error, try different input \n";                        
-        //     return;
-        // }
-
-        if(limitCounter >= limit)
-        {
-            std::cout << "no possible combination is found \n";
-            return;
-        }
-
-        omega1 = distr1(gen1) * 20;
-        omega2 = distr2(gen2) * 20;
-        int tempA = distr3(gen3) * 2;
-        double tempB = (double)distr4(gen4) / 100.0;
-        for(int m = 0; m < lowSize; m++)
-        {
-            //PR[m] = tempB;
-            meanAlpha[m][0] = distr3(gen3);
-        }
-        tempA = distr3(gen3) * 2;
-        for(int m = lowSize; m < totalSize; m++)
-        {
-            //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-            meanAlpha[m][0] = distr3(gen3);
-        }
-        
-        std::cout << "trying the following combination: " << omega1 << " " << omega2 << " ";
-
-        init();
-        for(int m = 0; m < totalSize; m++)
-        {
-            std::cout << meanAlpha[m][0] << " ";
-            getFlowPaths(m);
-        }
-
-        std::cout << "  #iteration: " << limitCounter << "\n";
-
-        r = 0;
-        i = 0;
-        limitCounter += 1;
-    }
-    
-    }
-
-    }
-    }
-
     storeRandomData();
-        
-    //}
     
     for(int l = 0; l < totalSize; l++)
     {
+
         init();
         getFlowPaths(l);
 
@@ -1492,6 +1400,210 @@ double getBladeDist(int i, int j, double radius)
     return 0.5 * dist * ( radius / mean_radi[i][j] );
 }
 
+void findCombinationOmega(int j, std::vector<int> &out, std::uniform_int_distribution<> distr1,std::uniform_int_distribution<> distr2,std::uniform_int_distribution<> distr3, std::uniform_int_distribution<> distr4 )
+{
+    float dir1, dir2;
+    double theta;
+    std::random_device rd1;
+    if(j == 1)
+    {
+        dir1 = 0.8;
+        dir2 = 0.0;
+    }
+    if(j == 0)
+    {
+        dir1 = 0.0;
+        dir2 = -0.8;
+    }
+
+    for(int i = 0; i < totalSize ; i++)
+    {
+
+    for(int r = 0; r <= resolution; r++)
+    {
+
+    while(true)
+    {               
+    if(j == 0)
+    {
+
+    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    }
+    if(j == 1)          
+    {
+    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    }
+    
+    lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+    lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
+    
+    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+    liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+    liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+    if(theta >= 0.73 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0)
+    {
+        std::cout << "stage " << i << " passes\n";      
+
+        break;
+    }
+    else                                        
+    {           
+        omega1 = distr1(rd1) * 20;
+        omega2 = distr2(rd1) * 20;
+        int tempA = distr3(rd1) * 2;
+        double tempB = (double)distr4(rd1) / 100.0;
+        for(int m = 0; m < lowSize; m++)
+        {
+            //PR[m] = tempB;
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        tempA = distr3(rd1) * 2;
+        for(int m = lowSize; m < totalSize; m++)
+        {
+            //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        
+        std::cout << "trying the following combination: " << omega1 << " " << omega2 << " ";
+
+        init();
+        for(int m = 0; m < totalSize; m++)
+        {
+            std::cout << meanAlpha[m][0] << " ";
+            getFlowPaths(m);
+        }
+
+        std::cout << "\n";
+
+        r = 0;
+        i = 0;
+    }
+
+    }
+
+    }
+    }
+
+    out.insert(out.end(), omega1);
+}
+
+void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution<> distr3)
+{
+    float dir1, dir2;
+    double theta, smallestGradient;
+    std::random_device rd1;
+    dVec<int> suitableAlphas;
+    dVec<int> successfulAlphas;
+    sVec<double> accumulatedSmallestGradient;
+    dVec<double> tempGradient;
+    tempGradient.reserve(totalSize);
+    suitableAlphas.reserve(totalSize);
+
+    if(j == 1)
+    {
+        dir1 = 0.8;
+        dir2 = 0.0;
+    }
+    if(j == 0)
+    {
+        dir1 = 0.0;
+        dir2 = -0.8;
+    }
+
+    for(int nklf = 0; nklf < 100; nklf++)
+    {
+
+    for(int i = 0; i < totalSize ; i++)
+    {
+
+    for(int r = 0; r <= resolution; r++)
+    {
+
+    while(true)
+    {               
+    if(j == 0)
+    {
+
+    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    }
+    if(j == 1)          
+    {
+    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    }
+    
+    lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+    lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
+    
+    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+    liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+    liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+    if(theta >= 0.73 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0)
+    {
+        std::cout << "stage " << i << " passes\n";      
+        tempGradient[nklf].insert(tempGradient[nklf].end(), liftCoefficient[i][j][r] - liftCoefficient[i-1][j][r]);
+        suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[i][0]);
+        break;
+    }
+    else                                        
+    {           
+        tempGradient[nklf].clear();     
+        suitableAlphas[nklf].clear();  
+
+        int tempA = distr3(rd1) * 2;        
+        for(int m = 0; m < lowSize; m++)
+        {
+            //PR[m] = tempB;    
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        tempA = distr3(rd1) * 2;
+        for(int m = lowSize; m < totalSize; m++)
+        {
+            //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        
+        std::cout << "trying the following combination: " << omega1 << " " << omega2 << " ";
+
+        init();
+        for(int m = 0; m < totalSize; m++)             
+        {
+            std::cout << meanAlpha[m][0] << " ";
+            getFlowPaths(m);
+        }
+
+        std::cout << "\n";
+
+        r = 0;
+        i = 0;
+    }
+
+    }
+
+    }
+    }
+
+    accumulatedSmallestGradient.insert(accumulatedSmallestGradient.end(), std::min_element(tempGradient[nklf].begin()+1, tempGradient[nklf].end())[0]);
+
+    }
+
+    smallestGradient = std::min_element(accumulatedSmallestGradient.begin(), accumulatedSmallestGradient.end())[0];
+    int* ptr = std::find(accumulatedSmallestGradient.begin(), accumulatedSmallestGradient.end(), smallestGradient);
+    //fix this one above
+    out.insert(out.end(), );
+}
+
 void storeRandomData()
 {
     std::ofstream lk("randomGenResult/angles.dat", std::ios::app);
@@ -1516,17 +1628,17 @@ void storeRandomData()
 int main()
 {
     dVec<double> rTip = {
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },           
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
-{ 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },           
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
+    { 0.08, 0.08, 0.08 },
     };
-    sVec<double> delta_P = { 1.075, 1.1, 1.15, 1.2, 1.25, 1.3, 1.3, 1.325}; //{ 1.075, 1.1, 1.15, 1.2, 1.25, 1.3, 1.3, 1.325, 1.325, 1.325, 1.3 };
+    sVec<double> delta_P = { 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4}; //{ 1.075, 1.1, 1.15, 1.2, 1.25, 1.3, 1.3, 1.325, 1.325, 1.325, 1.3 };
     sVec<double> init_alpha1 = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //{ -50, -48, -46, 0, 30, 42, 48, 58, 58, 62, 68, 70 };
     sVec<double> degOfReaction = { 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,0.6, 0.6};
     dVec<double> chordLengths = {
@@ -1546,7 +1658,7 @@ int main()
     double omega_1 = 2250;//5390; //3250 //from algorithm = 3475
     double omega_2 = 5600;//6650; //5600 //from algorithm = 7275
     //resolution only works with even numbers, idk why
-    double resol = 4; 
+    double resol = 8; 
     double v1 = 69.4377418988;                                              
     double v2 =  v1;
     double Temp = 300;
@@ -1571,7 +1683,7 @@ int main()
     // {                        
     // test.getBladeAngles(i,f);
     // }
-    test.getAerofoilTD(3,f);
+    //test.getAerofoilTD(3,f);
     //test.generateBlade(0,f);
     //test.getCamberline(3,1,50);
     //test.clear();
