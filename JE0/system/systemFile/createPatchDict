@@ -1,0 +1,65 @@
+FoamFile
+{
+   version     2.0;
+   format      ascii;
+   class       dictionary;
+   object      createPatchDict;
+}
+
+
+pointSync      false;
+
+patches
+(
+   {
+       name            cyclicFace1;
+       constructFrom   patches;
+
+       patchInfo
+       {
+           type            cyclic;
+           matchTolerance  0.01;
+           neighbourPatch  cyclicFace2;
+           transform       rotational;
+           rotationAxis    (0 0 1);
+           rotationCentre  (0 0 0);
+
+       }
+
+   patches (cyclic1);
+
+   set         cyclicFace1;
+   }
+
+
+
+
+
+   {
+       name            cyclicFace2;
+       constructFrom   patches;
+
+       patchInfo
+       {
+           type            cyclic;
+           matchTolerance  0.01;
+           neighbourPatch  cyclicFace1;
+           transform       rotational;
+           rotationAxis    (0 0 1);
+           rotationCentre  (0 0 0);
+
+       }
+
+   patches (cyclic2);
+
+   set         cyclicFace2;
+   }
+
+
+);
+
+
+
+
+
+
