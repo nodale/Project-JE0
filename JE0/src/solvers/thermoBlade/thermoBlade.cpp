@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <fstream>
+#include <iterator>
 #include <ratio>
 #include <chrono>
 #include <thread>
@@ -123,12 +124,12 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
 , lowSize( lpSize )     
 , highSize( hpSize )
 {
-    fileOut.open("out.dat");
-    fileOut2.open("out2.dat");
-    fileOut3.open("out3.dat");  
-    fileOut4.open("out4.dat");
-    compShape.open("shape.dat");
-    char camFilename[] = "camberline.dat";
+    fileOut.open("output/misc/out.dat");
+    fileOut2.open("output/misc/out2.dat");
+    fileOut3.open("output/misc/out3.dat");  
+    fileOut4.open("output/misc/out4.dat");
+    compShape.open("output/misc/shape.dat");
+    char camFilename[] = "output/misc/camberline.dat";
     solver1::initFile(camFilename);
 
     totalSize = lpSize + hpSize;
@@ -1169,46 +1170,52 @@ void optimiseFlow(int j)
     int lowestRPM;   
 
     sVec<int> suitableRPM;
-    sVec<double> liftCoefficientGradient;
+    sVec<double> alphaCombination;
 
     std::random_device rd1;
 
     std::uniform_int_distribution<> distr1(50, 400); //omega1
     std::uniform_int_distribution<> distr2(200, 450); //omega2
-    std::uniform_int_distribution<> distr3(-30, 30); //alpha1 angles
+    std::uniform_int_distribution<> distr3(-60, 60); //alpha1 angles
     std::uniform_int_distribution<> distr4(105, 120); //pressure ratios
 
-    for(int lda = 0; lda < 100; lda++)
+    // for(int lda = 0; lda < 100; lda++)
+    // {
+
+    // //monte-carlo to find a random combination
+    // findCombinationOmega(j,suitableRPM, distr1, distr2, distr3, distr4);
+
+    // //algorithm for finding the lowest rpm
+    // //rerolling another random combination
+    // omega1 = distr1(rd1) * 20;
+    // omega2 = distr2(rd1) * 20;
+    // int tempA = distr3(rd1) * 2;
+    // double tempB = (double)distr4(rd1) / 100.0; 
+    // for(int m = 0; m < lowSize; m++)
+    // {
+    //     //PR[m] = tempB;
+    //     meanAlpha[m][0] = distr3(rd1);
+
+    // }
+    // tempA = distr3(rd1) * 2;
+    // for(int m = lowSize; m < totalSize; m++)
+    // {
+    //     //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+    //     meanAlpha[m][0] = distr3(rd1);
+    // }
+    // }
+
+    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 1000);
+    for(int b = 0; b < totalSize; b++)
     {
-
-    //monte-carlo to find a random combination
-    findCombinationOmega(j,suitableRPM, distr1, distr2, distr3, distr4);
-
-    //algorithm for finding the lowest rpm
-    //rerolling another random combination
-    omega1 = distr1(rd1) * 20;
-    omega2 = distr2(rd1) * 20;
-    int tempA = distr3(rd1) * 2;
-    double tempB = (double)distr4(rd1) / 100.0;
-    for(int m = 0; m < lowSize; m++)
-    {
-        //PR[m] = tempB;
-        meanAlpha[m][0] = distr3(rd1);
-
-    }
-    tempA = distr3(rd1) * 2;
-    for(int m = lowSize; m < totalSize; m++)
-    {
-        //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-        meanAlpha[m][0] = distr3(rd1);
-    }
+        meanAlpha[b][0] = alphaCombination[b];
     }
 
-    findCombinationAlpha(j, liftCoefficientGradient, distr3);
+    storeOmegaData(alphaCombination);
 
-    lowestRPM = std::min_element(suitableRPM.begin(), suitableRPM.end())[0];
+    //lowestRPM = std::min_element(suitableRPM.begin(), suitableRPM.end())[0];
     
-    storeRandomData();
+    //storeRandomData();
     
     for(int l = 0; l < totalSize; l++)
     {
@@ -1240,7 +1247,7 @@ void optimiseFlow(int j)
 
             batchAnalysis[l] << theta << " " <<  liftCoefficient[l][j][r] << "\n";
         }
-        std::cout<< solidity[l][0] << std::endl;
+        std::cout<< solidity[l][j] << std::endl;
     }
     std::cout << omega1 << " " << omega2 << std::endl;
 
@@ -1494,7 +1501,7 @@ void findCombinationOmega(int j, std::vector<int> &out, std::uniform_int_distrib
     out.insert(out.end(), omega1);
 }
 
-void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution<> distr3)
+int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution<> distr2, std::uniform_int_distribution<> distr3, int sampleSize)
 {
     float dir1, dir2;
     double theta, smallestGradient;
@@ -1502,10 +1509,16 @@ void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distributio
     dVec<int> suitableAlphas;
     dVec<int> successfulAlphas;
     sVec<double> accumulatedSmallestGradient;
+    sVec<double> localSmallestGradient;
+    sVec<double> stageSmallestGradient;
     dVec<double> tempGradient;
+    sVec<double> suitableOmega1;
+    int tempOmega1;
+    
     tempGradient.reserve(totalSize);
-    suitableAlphas.reserve(totalSize);
+    suitableAlphas.reserve(sampleSize);
 
+    bool firstAttempt = true;
     if(j == 1)
     {
         dir1 = 0.8;
@@ -1516,16 +1529,17 @@ void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distributio
         dir1 = 0.0;
         dir2 = -0.8;
     }
-
-    for(int nklf = 0; nklf < 100; nklf++)
+    
+    for(int nklf = 0; nklf < sampleSize; nklf++) //sample size
     {
 
     for(int i = 0; i < totalSize ; i++)
     {
 
-    for(int r = 0; r <= resolution; r++)
+    for(int r = 0; r <= resolution; r++)    
     {
-
+    
+    
     while(true)
     {               
     if(j == 0)
@@ -1550,32 +1564,55 @@ void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distributio
     liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
 
-    if(theta >= 0.73 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0)
+    if(theta >= 0.73 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0 && firstAttempt == false)
     {
-        std::cout << "stage " << i << " passes\n";      
-        tempGradient[nklf].insert(tempGradient[nklf].end(), liftCoefficient[i][j][r] - liftCoefficient[i-1][j][r]);
-        suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[i][0]);
+        if(r != 0)
+        {
+        tempGradient[i].insert(tempGradient[i].end(), liftCoefficient[i][j][r] - liftCoefficient[i][j][r-1]);
+        }
+        if(r == resolution && i == totalSize - 1)
+        {
+            for( int g = 0; g < totalSize; g++)
+            {
+                stageSmallestGradient.insert(stageSmallestGradient.end(), std::max_element(tempGradient[g].begin(), tempGradient[g].end())[0]);
+                suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[g][0]);
+                suitableOmega1.insert(suitableOmega1.end(), tempOmega1);
+                //std::cout << stageSmallestGradient[j] << std::endl;
+            }
+            localSmallestGradient.insert(localSmallestGradient.end(), std::max_element(stageSmallestGradient.begin(), stageSmallestGradient.end())[0]);
+            
+            std::cout << "combination no " << nklf << " passes\n";      
+
+            stageSmallestGradient.clear();
+            tempGradient.clear();
+
+            firstAttempt = true;
+        }
         break;
     }
     else                                        
-    {           
-        tempGradient[nklf].clear();     
-        suitableAlphas[nklf].clear();  
+    {          
+        firstAttempt = false; 
+        tempGradient[i].clear();     
+        suitableAlphas[nklf].clear();
 
-        int tempA = distr3(rd1) * 2;        
+        //int tempA = distr3(rd1) * 2;        
         for(int m = 0; m < lowSize; m++)
         {
-            //PR[m] = tempB;    
+            //PR[m] = tempB;
+            omega1 = distr2(rd1) * 15;
+            tempOmega1 = omega1;
             meanAlpha[m][0] = distr3(rd1);
         }
-        tempA = distr3(rd1) * 2;
+        //tempA = distr3(rd1) * 2;
         for(int m = lowSize; m < totalSize; m++)
         {
             //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+            omega1 = distr2(rd1) * 15;
             meanAlpha[m][0] = distr3(rd1);
         }
         
-        std::cout << "trying the following combination: " << omega1 << " " << omega2 << " ";
+        std::cout << "trying the following combination: " << omega1 << " //" << omega2 << " ";
 
         init();
         for(int m = 0; m < totalSize; m++)             
@@ -1595,15 +1632,26 @@ void findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distributio
     }
     }
 
-    accumulatedSmallestGradient.insert(accumulatedSmallestGradient.end(), std::min_element(tempGradient[nklf].begin()+1, tempGradient[nklf].end())[0]);
+    //accumulatedSmallestGradient.insert(accumulatedSmallestGradient.end(), std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0]);
 
     }
+    // for(int l = 0; l < sampleSize; l++)
+    // {
+    //     std::cout << localSmallestGradient[l] << std::endl;
+    // }
+    smallestGradient = std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0];
+    auto index = std::find(localSmallestGradient.begin(),localSmallestGradient.end(), smallestGradient);
+    size_t dist = std::distance(localSmallestGradient.begin(), index);
 
-    smallestGradient = std::min_element(accumulatedSmallestGradient.begin(), accumulatedSmallestGradient.end())[0];
-    int* ptr = std::find(accumulatedSmallestGradient.begin(), accumulatedSmallestGradient.end(), smallestGradient);
-    //fix this one above
-    //out.insert(out.end(), );
+    std::cout << dist << std::endl;
+
+    for(int c = 0; c < totalSize; c++)
+    {
+    out.insert(out.end(), suitableAlphas[(int)dist][c]);
+    }
+    return tempOmega1;
 }
+
 
 void storeRandomData()
 {
@@ -1622,6 +1670,25 @@ void storeRandomData()
 
     lk.close();
     lo.close();
+};
+
+void storeOmegaData(sVec<double> omegas)
+{
+    std::ofstream lk("output/randomGenResult/angles.dat", std::ios::app);
+    std::ofstream lo("output/randomGenResult/omegas.dat", std::ios::app);
+
+    lo << omega1 << "\n";
+
+    lo.close();
+
+    for(int l = 0; l < totalSize; l++)
+    {
+        lk << l << " " << omegas[l] << std::endl;     
+    }
+
+    lk << "\n";
+
+    lk.close();
 };
 
 };
@@ -1666,7 +1733,7 @@ int main()
     double rho_ = 1.204;
     double Pres = 103.15;
 
-    system("./lib/clear.sh");
+    //system("./lib/clear.sh");
 
     Blade test(rTip, rHub, omega_1, omega_2 , resol, v1, v2, delta_P, Temp, Pres, init_alpha1, degOfReaction, chordLengths, 7, 0);
 
