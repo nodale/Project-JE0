@@ -1205,7 +1205,7 @@ void optimiseFlow(int j)
     // }
     // }
 
-    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 1000);
+    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 100000);
     for(int b = 0; b < totalSize; b++)
     {
         meanAlpha[b][0] = alphaCombination[b];
