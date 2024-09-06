@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <cstdint>
@@ -7,6 +8,7 @@
 #include <iterator>
 #include <ratio>
 #include <chrono>
+#include <string>
 #include <thread>
 #include <vector>
 #include <complex>
@@ -250,7 +252,7 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
         }
 
         //opening a file for each batchAnalysis ofstream
-        tempName = "batchData/" + std::to_string(i) + ".dat";
+        tempName = "output/batchData/" + std::to_string(i) + ".dat";
         batchAnalysis[i].open( tempName);
     }
 
@@ -1205,7 +1207,7 @@ void optimiseFlow(int j)
     // }
     // }
 
-    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 100000);
+    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 10000, 10000);
     for(int b = 0; b < totalSize; b++)
     {
         meanAlpha[b][0] = alphaCombination[b];
@@ -1217,39 +1219,41 @@ void optimiseFlow(int j)
     
     //storeRandomData();
     
-    for(int l = 0; l < totalSize; l++)
-    {
+    // for(int l = 0; l < totalSize; l++)
+    // {
 
-        init();
-        getFlowPaths(l);
+    //     init();
+    //     getFlowPaths(l);
 
-        for(int r = 0; r <= resolution; r++)
-        {
-            if(j == 0)
-            {
-            theta = cos(beta[l][0][r]/RadToDegree) / cos(beta[l][1][r]/RadToDegree); 
-            }
-            if(j == 1)  
-            {
-            theta = cos(alpha[l+1][0][r]/RadToDegree) / cos(alpha[l][1][r]/RadToDegree); 
-            }
-            lossCoefficient[l][0][r] = 0.014 * solidity[l][0] / cos( beta[l][1][r] / RadToDegree );
-            lossCoefficient[l][1][r] = 0.014 * solidity[l][1] / cos( alpha[l+1][0][r] / RadToDegree );
+    //     for(int r = 0; r <= resolution; r++)
+    //     {
+    //         if(j == 0)
+    //         {
+    //         theta = cos(beta[l][0][r]/RadToDegree) / cos(beta[l][1][r]/RadToDegree); 
+    //         }
+    //         if(j == 1)  
+    //         {
+    //         theta = cos(alpha[l+1][0][r]/RadToDegree) / cos(alpha[l][1][r]/RadToDegree); 
+    //         }
+    //         lossCoefficient[l][0][r] = 0.014 * solidity[l][0] / cos( beta[l][1][r] / RadToDegree );
+    //         lossCoefficient[l][1][r] = 0.014 * solidity[l][1] / cos( alpha[l+1][0][r] / RadToDegree );
             
-            Mach[l][0][r] = VX[0] / ( cos( beta[l][1][r] / RadToDegree ) * pow( Temperature[l][1] * 287 * gamma , 0.5 ) );
-            Mach[l][1][r] = VX[0] / ( cos( alpha[l+1][0][r] / RadToDegree ) * pow( Temperature[l][2] * 287 * gamma , 0.5 ) );
+    //         Mach[l][0][r] = VX[0] / ( cos( beta[l][1][r] / RadToDegree ) * pow( Temperature[l][1] * 287 * gamma , 0.5 ) );
+    //         Mach[l][1][r] = VX[0] / ( cos( alpha[l+1][0][r] / RadToDegree ) * pow( Temperature[l][2] * 287 * gamma , 0.5 ) );
 
-            pressureLoss[l][0][r] = 0.000005 * rho[l][1] * lossCoefficient[l][0][r] * pow( VX[0] / cos( beta[l][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][0][r] , 2 ) , gamma / ( gamma - 1 ) );
-            pressureLoss[l][1][r] = 0.000005 * rho[l][2] * lossCoefficient[l][1][r] * pow( VX[0] / cos( alpha[l+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+    //         pressureLoss[l][0][r] = 0.000005 * rho[l][1] * lossCoefficient[l][0][r] * pow( VX[0] / cos( beta[l][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    //         pressureLoss[l][1][r] = 0.000005 * rho[l][2] * lossCoefficient[l][1][r] * pow( VX[0] / cos( alpha[l+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][1][r] , 2 ) , gamma / ( gamma - 1 ) );
 
-            liftCoefficient[l][0][r] = 2.0 / solidity[l][0] * ( tan( beta[l][0][r] / RadToDegree ) - tan( beta[l][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][0][r] * sin( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) / ( rho[l][1] * pow( 0.5 * ( VX[0] / cos( beta[l][0][r] / RadToDegree ) + VX[0] / cos( beta[l][1][r] / RadToDegree ) ) , 2 ) * solidity[l][0] );
-            liftCoefficient[l][1][r] = 2.0 / solidity[l][1] * ( tan( alpha[l][1][r] / RadToDegree ) - tan( alpha[l+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][1][r] * sin( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) / ( rho[l][2] * pow( 0.5 * ( VX[1] / cos( alpha[l][1][r] / RadToDegree ) + VX[1] / cos( alpha[l+1][0][r] / RadToDegree ) ) , 2 ) * solidity[l][1] );
+    //         liftCoefficient[l][0][r] = 2.0 / solidity[l][0] * ( tan( beta[l][0][r] / RadToDegree ) - tan( beta[l][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][0][r] * sin( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) / ( rho[l][1] * pow( 0.5 * ( VX[0] / cos( beta[l][0][r] / RadToDegree ) + VX[0] / cos( beta[l][1][r] / RadToDegree ) ) , 2 ) * solidity[l][0] );
+    //         liftCoefficient[l][1][r] = 2.0 / solidity[l][1] * ( tan( alpha[l][1][r] / RadToDegree ) - tan( alpha[l+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][1][r] * sin( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) / ( rho[l][2] * pow( 0.5 * ( VX[1] / cos( alpha[l][1][r] / RadToDegree ) + VX[1] / cos( alpha[l+1][0][r] / RadToDegree ) ) , 2 ) * solidity[l][1] );
 
-            batchAnalysis[l] << theta << " " <<  liftCoefficient[l][j][r] << "\n";
-        }
-        std::cout<< solidity[l][j] << std::endl;
-    }
-    std::cout << omega1 << " " << omega2 << std::endl;
+    //         batchAnalysis[l] << theta << " " <<  liftCoefficient[l][j][r] << "\n";
+    //     }
+    //     std::cout<< solidity[l][j] << std::endl;
+    // }
+    // std::cout << omega1 << " " << omega2 << std::endl;
+
+    drawLiftCoefficient(j);
 
 }
 
@@ -1501,7 +1505,7 @@ void findCombinationOmega(int j, std::vector<int> &out, std::uniform_int_distrib
     out.insert(out.end(), omega1);
 }
 
-int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution<> distr2, std::uniform_int_distribution<> distr3, int sampleSize)
+int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution<> distr2, std::uniform_int_distribution<> distr3, int sampleSize, int maxTries)
 {
     float dir1, dir2;
     double theta, smallestGradient;
@@ -1514,6 +1518,8 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     dVec<double> tempGradient;
     sVec<double> suitableOmega1;
     int tempOmega1;
+
+    int tries = 0;
     
     tempGradient.reserve(totalSize);
     suitableAlphas.reserve(sampleSize);
@@ -1539,6 +1545,12 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     for(int r = 0; r <= resolution; r++)    
     {
     
+    tries += 1;
+    if(tries >= maxTries)
+    {
+        std::cout << "no design fits the gien RPM, increase the maxTries or change the RPM\n";
+        break;
+    }
     
     while(true)
     {               
@@ -1587,6 +1599,7 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
             tempGradient.clear();
 
             firstAttempt = true;
+            tries = 0;
         }
         break;
     }
@@ -1600,15 +1613,15 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
         for(int m = 0; m < lowSize; m++)
         {
             //PR[m] = tempB;
-            omega1 = distr2(rd1) * 15;
-            tempOmega1 = omega1;
+            //omega1 = distr2(rd1) * 15;
+            //tempOmega1 = omega1;
             meanAlpha[m][0] = distr3(rd1);
         }
         //tempA = distr3(rd1) * 2;
         for(int m = lowSize; m < totalSize; m++)
         {
             //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-            omega1 = distr2(rd1) * 15;
+            //omega1 = distr2(rd1) * 15;
             meanAlpha[m][0] = distr3(rd1);
         }
         
@@ -1649,7 +1662,7 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     {
     out.insert(out.end(), suitableAlphas[(int)dist][c]);
     }
-    return tempOmega1;
+    return omega1;
 }
 
 
@@ -1674,6 +1687,9 @@ void storeRandomData()
 
 void storeOmegaData(sVec<double> omegas)
 {
+    system("rm output/randomGenResult/angles.dat");
+    system("rm output/randomGenResult/omegas.dat");
+
     std::ofstream lk("output/randomGenResult/angles.dat", std::ios::app);
     std::ofstream lo("output/randomGenResult/omegas.dat", std::ios::app);
 
@@ -1683,13 +1699,83 @@ void storeOmegaData(sVec<double> omegas)
 
     for(int l = 0; l < totalSize; l++)
     {
-        lk << l << " " << omegas[l] << std::endl;     
+        lk << omegas[l] << std::endl;     
     }
 
     lk << "\n";
 
     lk.close();
 };
+
+void drawLiftCoefficient(int j)
+{
+    std::string temp;
+    double tempDouble;
+    std::ifstream angles("output/randomGenResult/angles.dat");
+    std::ifstream omegas("output/randomGenResult/omegas.dat");
+
+    //system("rm -r output/batchData/*");
+    
+    //sVec<double> anglesCom;
+    //anglesCom.reserve(totalSize);
+
+    if (!angles.is_open()) 
+    {
+        std::cerr << "Error opening angles file!" << std::endl;
+        std::terminate();
+    }
+    else
+    {
+        for(int i = 0; i < totalSize; i++)
+        {
+            std::getline(angles, temp);
+            tempDouble = std::stod(temp);
+
+            meanAlpha[i][0] = tempDouble;
+        }
+
+        std::getline(omegas, temp);
+        tempDouble = std::stod(temp);
+
+        omega1 =  tempDouble;
+    }
+
+    double theta;
+
+    for(int l = 0; l < totalSize; l++)
+    {
+
+        init();
+        getFlowPaths(l);
+
+        for(int r = 0; r <= resolution; r++)
+        {
+            if(j == 0)
+            {
+            theta = cos(beta[l][0][r]/RadToDegree) / cos(beta[l][1][r]/RadToDegree); 
+            }
+            if(j == 1)  
+            {
+            theta = cos(alpha[l+1][0][r]/RadToDegree) / cos(alpha[l][1][r]/RadToDegree); 
+            }
+            lossCoefficient[l][0][r] = 0.014 * solidity[l][0] / cos( beta[l][1][r] / RadToDegree );
+            lossCoefficient[l][1][r] = 0.014 * solidity[l][1] / cos( alpha[l+1][0][r] / RadToDegree );
+            
+            Mach[l][0][r] = VX[0] / ( cos( beta[l][1][r] / RadToDegree ) * pow( Temperature[l][1] * 287 * gamma , 0.5 ) );
+            Mach[l][1][r] = VX[0] / ( cos( alpha[l+1][0][r] / RadToDegree ) * pow( Temperature[l][2] * 287 * gamma , 0.5 ) );
+
+            pressureLoss[l][0][r] = 0.000005 * rho[l][1] * lossCoefficient[l][0][r] * pow( VX[0] / cos( beta[l][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+            pressureLoss[l][1][r] = 0.000005 * rho[l][2] * lossCoefficient[l][1][r] * pow( VX[0] / cos( alpha[l+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[l][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+            liftCoefficient[l][0][r] = 2.0 / solidity[l][0] * ( tan( beta[l][0][r] / RadToDegree ) - tan( beta[l][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][0][r] * sin( 0.5 * ( tan( beta[l][0][r] / RadToDegree ) + tan( beta[l][1][r] / RadToDegree ) ) ) / ( rho[l][1] * pow( 0.5 * ( VX[0] / cos( beta[l][0][r] / RadToDegree ) + VX[0] / cos( beta[l][1][r] / RadToDegree ) ) , 2 ) * solidity[l][0] );
+            liftCoefficient[l][1][r] = 2.0 / solidity[l][1] * ( tan( alpha[l][1][r] / RadToDegree ) - tan( alpha[l+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[l][1][r] * sin( 0.5 * ( tan( alpha[l][1][r] / RadToDegree ) + tan( alpha[l+1][0][r] / RadToDegree ) ) ) / ( rho[l][2] * pow( 0.5 * ( VX[1] / cos( alpha[l][1][r] / RadToDegree ) + VX[1] / cos( alpha[l+1][0][r] / RadToDegree ) ) , 2 ) * solidity[l][1] );
+
+            batchAnalysis[l] << theta << " " <<  liftCoefficient[l][j][r] << "\n";
+        }
+    }
+
+    system("./bin/drawLiftCoefficient.sh");    
+}
 
 };
 
@@ -1723,7 +1809,7 @@ int main()
         { 0.015 , 0.015 },          
     };                          
     double rHub = 0.04;
-    double omega_1 = 2250;//5390; //3250 //from algorithm = 3475
+    double omega_1 = 6000;//5390; //3250 //from algorithm = 3475
     double omega_2 = 5600;//6650; //5600 //from algorithm = 7275
     //resolution only works with even numbers, idk why
     double resol = 8; 
