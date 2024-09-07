@@ -1,6 +1,6 @@
 #include "../infoBlade/infoBlade.h"
 
-class thermoBlade : public infoBlade
+void infoBlade::initConditionSetUp()
 {
 
-};
+}
