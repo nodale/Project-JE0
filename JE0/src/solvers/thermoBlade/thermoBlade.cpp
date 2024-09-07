@@ -1207,7 +1207,7 @@ void optimiseFlow(int j)
     // }
     // }
 
-    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 10000, 10000);
+    omega1 = findCombinationAlpha(j, alphaCombination, distr2, distr3, 2, 10000000);
     for(int b = 0; b < totalSize; b++)
     {
         meanAlpha[b][0] = alphaCombination[b];
@@ -1527,7 +1527,7 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     bool firstAttempt = true;
     if(j == 1)
     {
-        dir1 = 0.8;
+        dir1 = 0.95;
         dir2 = 0.0;
     }
     if(j == 0)
@@ -1548,8 +1548,8 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     tries += 1;
     if(tries >= maxTries)
     {
-        std::cout << "no design fits the gien RPM, increase the maxTries or change the RPM\n";
-        break;
+        std::cout << "no design fits the given RPM, increase the maxTries or change the RPM\n";
+        std::terminate();
     }
     
     while(true)
@@ -1575,6 +1575,8 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
 
     liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+    std::cout << solidity[i][0] << " " << theta << " " << liftCoefficient[i][j][r] << std::endl;
 
     if(theta >= 0.73 && liftCoefficient[i][j][r] <= dir1 && liftCoefficient[i][j][r] >= dir2 && solidity[i][0] <= 5.0 && firstAttempt == false)
     {
@@ -1613,15 +1615,15 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
         for(int m = 0; m < lowSize; m++)
         {
             //PR[m] = tempB;
-            //omega1 = distr2(rd1) * 15;
-            //tempOmega1 = omega1;
+            omega1 = distr2(rd1) * 15;
+            tempOmega1 = omega1;
             meanAlpha[m][0] = distr3(rd1);
         }
         //tempA = distr3(rd1) * 2;
         for(int m = lowSize; m < totalSize; m++)
         {
             //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-            //omega1 = distr2(rd1) * 15;
+            omega1 = distr2(rd1) * 15;
             meanAlpha[m][0] = distr3(rd1);
         }
         
@@ -1662,7 +1664,7 @@ int findCombinationAlpha(int j, sVec<double> &out, std::uniform_int_distribution
     {
     out.insert(out.end(), suitableAlphas[(int)dist][c]);
     }
-    return omega1;
+    return tempOmega1;
 }
 
 
@@ -1774,7 +1776,14 @@ void drawLiftCoefficient(int j)
         }
     }
 
+    for(int i = 0; i < totalSize; i++)
+    {
+        batchAnalysis[i].close();
+    }
+
     system("./bin/drawLiftCoefficient.sh");    
+
+
 }
 
 };
@@ -1794,7 +1803,7 @@ int main()
     };
     sVec<double> delta_P = { 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4}; //{ 1.075, 1.1, 1.15, 1.2, 1.25, 1.3, 1.3, 1.325, 1.325, 1.325, 1.3 };
     sVec<double> init_alpha1 = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //{ -50, -48, -46, 0, 30, 42, 48, 58, 58, 62, 68, 70 };
-    sVec<double> degOfReaction = { 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,0.6, 0.6};
+    sVec<double> degOfReaction = { 0.7, 0.7, 0.7, 0.7, 0.7, 0.7,0.7, 0.7};
     dVec<double> chordLengths = {
         { 0.015 , 0.015 },
         { 0.015 , 0.015 },
@@ -1809,7 +1818,7 @@ int main()
         { 0.015 , 0.015 },          
     };                          
     double rHub = 0.04;
-    double omega_1 = 6000;//5390; //3250 //from algorithm = 3475
+    double omega_1 = 5000;//5390; //3250 //from algorithm = 3475
     double omega_2 = 5600;//6650; //5600 //from algorithm = 7275
     //resolution only works with even numbers, idk why
     double resol = 8; 
@@ -1825,7 +1834,7 @@ int main()
 
     test.init();
     
-    int f = 0;
+    int f = 1;
     for(int i = 0; i < test.getTotalSize(); i++)
     {
     test.getFlowPaths(i);
