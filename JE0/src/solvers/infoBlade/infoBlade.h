@@ -18,6 +18,7 @@
 #include "../../../include/solver1.h"    
 #include "../../../include/blockMeshGenerator.h"
 #include "../../../include/sqlite3.h"
+#include "../../../include/pathFindeer.h"
 
 #define e 2.718281828459045
 //#define PI 3.14159265
@@ -37,7 +38,6 @@ constexpr double PI = 3.14159265;
 
 class infoBlade
 {
-
     //output file stream
     std::ofstream fileOut;
     std::ofstream fileOut2;
@@ -114,6 +114,7 @@ class infoBlade
     //misc
     double h, g;        
 
+    public :
     bool dataBaseSetUp();
     bool initConditionSetUp();                  
 
