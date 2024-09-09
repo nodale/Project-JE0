@@ -17,6 +17,7 @@
 
 #include "../../../include/solver1.h"    
 #include "../../../include/blockMeshGenerator.h"
+#include "../../../include/sqlite3.h"
 
 #define e 2.718281828459045
 //#define PI 3.14159265
@@ -111,8 +112,9 @@ class infoBlade
     
 
     //misc
-    double h, g;
+    double h, g;        
 
-    void initConditionSetUp();                  
+    bool dataBaseSetUp();
+    bool initConditionSetUp();                  
 
 };
