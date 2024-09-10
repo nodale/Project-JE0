@@ -19,3 +19,7 @@ $(EXEC): src/solvers/infoBlade/infoBlade.cpp
 clean:
 	rm -f $(EXEC)
 .PHONY: clean	
+
+clear:
+	rm blockMeshGenerator.o solver1.o pathFindeer.o Flib.a shell.o sqlite3.o infoBlade.o										
+.PHONY: clear

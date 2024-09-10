@@ -1,66 +1,75 @@
-#include "../infoBlade/infoBlade.h"
+#include "infoBlade.h"
+#include <cstdio>
 
 //TODO
-//find out why the stages are not inserted
+//embed the other solvers code with SQLite 
+
+//static variablesdefinitions
+int infoBlade::totalSize;     
+int infoBlade::lowSize;
+int infoBlade::highSize;
+double infoBlade::T1;
+double infoBlade::P1;
+double infoBlade::rho1;    
 
 const char* argv = 
 {
 "CREATE TABLE thermoBlade ("
 "   STAGE            INT     PRIMARY KEY,"
-"   Temperature1     REAL    NOT NULL UNIQUE,"
-"   Temperature2     REAL    NOT NULL UNIQUE,"
-"   Temperature3     REAL    NOT NULL UNIQUE,"
-"   TemperatureStag1 REAL    NOT NULL UNIQUE,"
-"   TemperatureStag2 REAL    NOT NULL UNIQUE,"
-"   TemperatureStag3 REAL    NOT NULL UNIQUE,"
-"   Pressure1        REAL    NOT NULL UNIQUE,"
-"   Pressure2        REAL    NOT NULL UNIQUE,"
-"   Pressure3        REAL    NOT NULL UNIQUE,"
-"   PressureStag1    REAL    NOT NULL UNIQUE,"
-"   PressureStag2    REAL    NOT NULL UNIQUE,"
-"   PressureStag3    REAL    NOT NULL UNIQUE,"
-"   rho1             REAL    NOT NULL UNIQUE,"
-"   rho2             REAL    NOT NULL UNIQUE,"
-"   rho3             REAL    NOT NULL UNIQUE,"
-"   psi              REAL    NOT NULL UNIQUE,"
-"   phi              REAL    NOT NULL UNIQUE,"
-"   a                REAL    NOT NULL UNIQUE,"
-"   b                REAL    NOT NULL UNIQUE,"
-"   Wr               REAL    NOT NULL UNIQUE,"
-"   Ws               REAL    NOT NULL UNIQUE,"
-"   efficiency1      REAL    NOT NULL UNIQUE,"
-"   efficiency2      REAL    NOT NULL UNIQUE,"  
-"   efficiency3      REAL    NOT NULL UNIQUE"  
+"   Temperature1     REAL    NOT NULL DEFAULT 0.0,"
+"   Temperature2     REAL    NOT NULL DEFAULT 0.0,"
+"   Temperature3     REAL    NOT NULL DEFAULT 0.0,"
+"   TemperatureStag1 REAL    NOT NULL DEFAULT 0.0,"
+"   TemperatureStag2 REAL    NOT NULL DEFAULT 0.0,"
+"   TemperatureStag3 REAL    NOT NULL DEFAULT 0.0,"
+"   Pressure1        REAL    NOT NULL DEFAULT 0.0,"
+"   Pressure2        REAL    NOT NULL DEFAULT 0.0,"
+"   Pressure3        REAL    NOT NULL DEFAULT 0.0,"
+"   PressureStag1    REAL    NOT NULL DEFAULT 0.0,"
+"   PressureStag2    REAL    NOT NULL DEFAULT 0.0,"
+"   PressureStag3    REAL    NOT NULL DEFAULT 0.0,"
+"   rho1             REAL    NOT NULL DEFAULT 0.0,"
+"   rho2             REAL    NOT NULL DEFAULT 0.0,"
+"   rho3             REAL    NOT NULL DEFAULT 0.0,"
+"   psi              REAL    NOT NULL DEFAULT 0.0,"
+"   phi              REAL    NOT NULL DEFAULT 0.0,"
+"   a                REAL    NOT NULL DEFAULT 0.0,"
+"   b                REAL    NOT NULL DEFAULT 0.0,"
+"   Wr               REAL    NOT NULL DEFAULT 0.0,"
+"   Ws               REAL    NOT NULL DEFAULT 0.0,"
+"   efficiency1      REAL    NOT NULL DEFAULT 0.0,"
+"   efficiency2      REAL    NOT NULL DEFAULT 0.0,"  
+"   efficiency3      REAL    NOT NULL DEFAULT 0.0"  
 ");"
 
 "CREATE TABLE aeroBlade ("
 "   STAGE            INT     PRIMARY KEY,"
-"   Mach0            REAL    NOT NULL UNIQUE,"
-"   Mach1            REAL    NOT NULL UNIQUE,"
-"   meanAlpha1       REAL    NOT NULL UNIQUE,"
-"   meanAlpha2       REAL    NOT NULL UNIQUE,"
-"   meanBeta1        REAL    NOT NULL UNIQUE,"
-"   meanBeta2        REAL    NOT NULL UNIQUE,"
-"   PressureRatio    REAL    NOT NULL UNIQUE,"
-"   Area1            REAL    NOT NULL UNIQUE,"
-"   Area2            REAL    NOT NULL UNIQUE,"
-"   Area3            REAL    NOT NULL UNIQUE,"
-"   chord1           REAL    NOT NULL UNIQUE,"
-"   chord2           REAL    NOT NULL UNIQUE,"
-"   solidity1        REAL    NOT NULL UNIQUE,"
-"   solidity2        REAL    NOT NULL UNIQUE"
+"   Mach0            REAL    NOT NULL DEFAULT 0.0,"
+"   Mach1            REAL    NOT NULL DEFAULT 0.0,"
+"   meanAlpha1       REAL    NOT NULL DEFAULT 0.0,"
+"   meanAlpha2       REAL    NOT NULL DEFAULT 0.0,"
+"   meanBeta1        REAL    NOT NULL DEFAULT 0.0,"
+"   meanBeta2        REAL    NOT NULL DEFAULT 0.0,"
+"   PressureRatio    REAL    NOT NULL DEFAULT 0.0,"
+"   Area1            REAL    NOT NULL DEFAULT 0.0,"
+"   Area2            REAL    NOT NULL DEFAULT 0.0,"
+"   Area3            REAL    NOT NULL DEFAULT 0.0,"
+"   chord1           REAL    NOT NULL DEFAULT 0.0,"
+"   chord2           REAL    NOT NULL DEFAULT 0.0,"
+"   solidity1        REAL    NOT NULL DEFAULT 0.0,"
+"   solidity2        REAL    NOT NULL DEFAULT 0.0"
 ");"
 
 "CREATE TABLE designParam ("
 "   STAGE            INT     PRIMARY KEY,"
-"   tip_radi1        REAL    NOT NULL UNIQUE,"
-"   tip_radi2        REAL    NOT NULL UNIQUE,"
-"   tip_radi3        REAL    NOT NULL UNIQUE,"
-"   hub_radi1        REAL    NOT NULL UNIQUE,"
-"   hub_radi2        REAL    NOT NULL UNIQUE,"
-"   hub_radi3        REAL    NOT NULL UNIQUE,"
-"   numBlades1       REAL    NOT NULL UNIQUE,"
-"   numBlades2       REAL    NOT NULL UNIQUE"
+"   tip_radi1        REAL    NOT NULL DEFAULT 0.0,"
+"   tip_radi2        REAL    NOT NULL DEFAULT 0.0,"
+"   tip_radi3        REAL    NOT NULL DEFAULT 0.0,"
+"   hub_radi1        REAL    NOT NULL DEFAULT 0.0,"
+"   hub_radi2        REAL    NOT NULL DEFAULT 0.0,"
+"   hub_radi3        REAL    NOT NULL DEFAULT 0.0,"
+"   numBlades1       REAL    NOT NULL DEFAULT 0.0,"
+"   numBlades2       REAL    NOT NULL DEFAULT 0.0"
 ");"
 };
 
@@ -77,7 +86,7 @@ static int callback(void* data, int argc, char** argv, char** ColName)
 
 static int insertStages(void* data, int argc, char** argv, char** ColName)
 {
-
+    std::cout << "A\n";
     return 0;
 }
 
@@ -89,13 +98,23 @@ void checkRC(int rc)
     }
 }
 
+void openCurrentInput(std::ifstream& input)
+{
+    std::filesystem::path newPath;
+    std::filesystem::path currentPath = getCurrentPath();
+    newPath = currentPath / "input" / "initCondInput.dat";
+    input.open(newPath);
+}
+
 //seets up the tables for all parameters
 bool infoBlade::dataBaseSetUp()
 {
+    std::string tempL, tempH;
+    std::ifstream input;
+    openCurrentInput(input);
     sqlite3* db;
     int rc;
     char* ErrorMsg = 0;
-
     sqlite3_stmt* stmt;
     const char* rowInput[3] = 
     {
@@ -105,6 +124,10 @@ bool infoBlade::dataBaseSetUp()
 
     };
 
+    std::getline(input, tempL);
+    std::getline(input, tempH);
+    infoBlade::totalSize = std::stoi(tempL) + std::stoi(tempH); 
+
     rc = sqlite3_open("output/database/db.db", &db);
     checkRC(rc);
 
@@ -112,29 +135,24 @@ bool infoBlade::dataBaseSetUp()
     if (rc != SQLITE_OK)            
     {
         std::cout << "ERROR : failed setting up dataBase ; " << ErrorMsg << std::endl;
-        return 1;
-    }
-    else
-    {
-        return 0;
     }
 
-    for(int j =0; j < 3; j++)
+    for(int j = 0; j < 3; j++)
     {
-        sqlite3_reset(stmt);
-        rc = sqlite3_prepare16_v2(db, rowInput[j], -1, &stmt, NULL);
+        rc = sqlite3_prepare_v2(db, rowInput[j], -1, &stmt, NULL);
         if(rc != SQLITE_OK)
         {
-            std::cout << "ERROR : statement preparation failed\n";
+            std::cout << "ERROR : statement preparation failed ; " << sqlite3_errmsg(db) << std::endl;
         }
-        for(int i = 0; i < totalSize; i++)
+        for(int i = 1; i <= totalSize; i++)
         {
             sqlite3_bind_int(stmt, 1, i);
             rc = sqlite3_step(stmt);
             if(rc != SQLITE_DONE)
             {
-                std::cout << "ERROR : SQLite step failed\n";
+                std::cout << "ERROR : SQLite step failed ; " << rc << std::endl;
             }
+            sqlite3_reset(stmt);
         }
     }
     sqlite3_finalize(stmt);
@@ -147,6 +165,7 @@ bool infoBlade::dataBaseSetUp()
 //reads initial conditions (T1, P1, and rho0) and put them into dataBase
 bool infoBlade::initConditionSetUp()
 {
+    std::string temp1;
     sqlite3* db;
     int rc;
     char* ErrorMsg = 0;
@@ -154,10 +173,18 @@ bool infoBlade::initConditionSetUp()
     rc = sqlite3_open("output/database/db.db", &db);
     checkRC(rc);
 
-    std::filesystem::path currentPath = getCurrentPath();
-    std::ifstream input(currentPath);
-
-    
+    std::ifstream input;
+    openCurrentInput(input);
+    std::getline(input, temp1);
+    infoBlade::lowSize = std::stoi(temp1);
+    std::getline(input, temp1);
+    infoBlade::highSize = std::stoi(temp1);
+    std::getline(input, temp1);
+    infoBlade::T1 = std::stod(temp1);
+    std::getline(input, temp1);
+    infoBlade::P1 = std::stod(temp1);
+    std::getline(input, temp1);
+    infoBlade::rho1 = std::stod(temp1);    
 
     sqlite3_close(db);
 
@@ -170,6 +197,9 @@ int main()
     infoBlade test;
 
     test.dataBaseSetUp();
+    test.initConditionSetUp();
+
+    std::cout << infoBlade::rho1 << std::endl;
 
     return 0;
 }

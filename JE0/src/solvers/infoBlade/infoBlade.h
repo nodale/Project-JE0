@@ -1,3 +1,6 @@
+#ifndef INFOBLADE_H
+#define INFOBLADE_H
+
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -38,84 +41,85 @@ constexpr double PI = 3.14159265;
 
 class infoBlade
 {
+    public : 
     //output file stream
-    std::ofstream fileOut;
-    std::ofstream fileOut2;
-    std::ofstream fileOut3;
-    std::ofstream fileOut4;
-    std::ofstream compShape;
-    std::ofstream batchAnalysis[11];
+    static std::ofstream fileOut;
+    static std::ofstream fileOut2;
+    static std::ofstream fileOut3;
+    static std::ofstream fileOut4;
+    static std::ofstream compShape;
+    static std::ofstream batchAnalysis[11];
 
     //design parameters
-    double VX[3];
-    dVec<double> tip_radi;
-    dVec<double> hub_radi;
-    dVec<double> mean_radi;
-    double omega1;
-    double omega2;              
-    dVec<double> v;
-    sVec<double> work;
-    dVec<double> diffusion;
-    dVec<double> numBlades;
-    int lowSize;
-    int highSize;
-    int totalSize;
+    static double VX[3];
+    static dVec<double> tip_radi;
+    static dVec<double> hub_radi;
+    static dVec<double> mean_radi;
+    static double omega1;
+    static double omega2;              
+    static dVec<double> v;
+    static sVec<double> work;
+    static dVec<double> diffusion;
+    static dVec<double> numBlades;
+    static int lowSize;
+    static int highSize;
+    static int totalSize;
 
     //aerodynamics parameters
 
     //Mach[i][0] is for velocity 2 relative
     //Mach[i][1] is for velocity 3 absolute 
-    dVec<std::vector<double>> Mach;
-    dVec<std::vector<double>> alpha;
-    dVec<std::vector<double>> beta;
-    dVec<double> meanAlpha;
-    dVec<double> meanBeta;
-    double Mach0;
-    double resolution;
-    sVec<double> PR;
-    sVec<double> R;
-    dVec<double> Area;
-    dVec<double> chord;
-    dVec<double> maxCam;       
-    dVec<double> maxCamPos;
-    dVec<std::vector<double>> liftCoefficient;
-    dVec<std::vector<double>> rotateAngle;
-    dVec<std::vector<double>> incidenceAngle;
-    dVec<std::vector<double>> AoA;
+    static dVec<std::vector<double>> Mach;
+    static dVec<std::vector<double>> alpha;
+    static dVec<std::vector<double>> beta;
+    static dVec<double> meanAlpha;
+    static dVec<double> meanBeta;
+    static double Mach0;
+    static double resolution;
+    static sVec<double> PR;
+    static sVec<double> R;
+    static dVec<double> Area;
+    static dVec<double> chord;
+    static dVec<double> maxCam;       
+    static dVec<double> maxCamPos;
+    static dVec<std::vector<double>> liftCoefficient;
+    static dVec<std::vector<double>> rotateAngle;
+    static dVec<std::vector<double>> incidenceAngle;
+    static dVec<std::vector<double>> AoA;
     //dummy variables
-    double dummyMaxCam, dummyMaxCamPos, dummyChord, dummyLiftCoefficient;
+    static double dummyMaxCam, dummyMaxCamPos, dummyChord, dummyLiftCoefficient;
     //work-done factor
     double WDF[18] = { 0.982, 0.952, 0.929, 0.910, 0.895, 0.882, 0.875, 0.868, 0.863, 0.860, 0.857, 0.855, 0.853, 0.851, 0.850, 0.849, 0.848, 0.847 };
-    dVec<std::vector<double>> lossCoefficient;
-    dVec<std::vector<double>> pressureLoss;
-    dVec<std::vector<double>> dischargeAngle;
+    static dVec<std::vector<double>> lossCoefficient;
+    static dVec<std::vector<double>> pressureLoss;
+    static dVec<std::vector<double>> dischargeAngle;
     double aValues[5] = { 0.2969, -0.1260, -0.3516, 0.2843, -0.1015 } ;
-    dVec<double> solidity;
+    static dVec<double> solidity;
 
 
     //thermodynamics parameters
-    double T1;                          
-    double rho1;
-    double P1;
-    dVec<double> Temperature;
-    dVec<double> TemperatureStag;
-    dVec<double> Pressure;
-    dVec<double> PressureStag;
-    dVec<double> rho;
-    sVec<double> psi;
-    sVec<double> phi;
-    sVec<double> a;
-    sVec<double> b;
-    sVec<double> Wr;
-    sVec<double> Ws;
-    dVec<double> efficiency;
+    static double T1;                          
+    static double rho1;
+    static double P1;
+    static dVec<double> Temperature;
+    static dVec<double> TemperatureStag;
+    static dVec<double> Pressure;
+    static dVec<double> PressureStag;
+    static dVec<double> rho;
+    static sVec<double> psi;
+    static sVec<double> phi;
+    static sVec<double> a;
+    static sVec<double> b;
+    static sVec<double> Wr;
+    static sVec<double> Ws;
+    static dVec<double> efficiency;
     
-
     //misc
-    double h, g;        
+    static double h, g;        
 
-    public :
     bool dataBaseSetUp();
     bool initConditionSetUp();                  
 
 };
+
+#endif
