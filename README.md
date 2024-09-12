@@ -1,3 +1,3 @@
-**This Repository is dedicated to archiving documentations, codes, data, and media of our personal project on creating a Jet Engine**
+**This Repository is dedicated to archiving documentations and source codes of my personal project on developing a doftware for developing axial compressors**
 
-The following softwares are used in the project : Blender, OpenFoam, ParaView, OpenOffice
+The following softwares are used in the project : OpenFoam, ParaView, OpenOffice
