@@ -4,7 +4,7 @@
 //TODO
 //embed the other solvers code with SQLite 
 
-//static variablesdefinitions
+//static variables definitions
 int infoBlade::totalSize;     
 int infoBlade::lowSize;
 int infoBlade::highSize;

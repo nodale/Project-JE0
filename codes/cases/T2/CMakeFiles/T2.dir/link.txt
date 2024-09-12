@@ -1,1 +1,0 @@
-/usr/bin/c++ -rdynamic CMakeFiles/T2.dir/src/T2.cpp.o -o T2
