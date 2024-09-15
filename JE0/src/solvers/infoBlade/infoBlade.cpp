@@ -4,7 +4,7 @@
 //TODO
 //embed the other solvers code with SQLite 
 
-//static variables definitions
+//static variables definitions used in this source file
 int infoBlade::totalSize;     
 int infoBlade::lowSize;
 int infoBlade::highSize;
@@ -12,11 +12,60 @@ double infoBlade::T1;
 double infoBlade::P1;
 double infoBlade::rho1;    
 
+//other static variables
+dVec<double> hub_radi;
+dVec<double> mean_radi;
+double omega1;
+double omega2;              
+dVec<double> v;
+sVec<double> work;
+dVec<double> diffusion;
+dVec<double> numBlades;
+int lowSize;
+int highSize;
+int totalSize;
+dVec<std::vector<double>> Mach;
+dVec<std::vector<double>> alpha;
+dVec<std::vector<double>> beta;
+dVec<double> meanAlpha;
+dVec<double> meanBeta;
+double Mach0;
+double resolution;
+sVec<double> PR;
+sVec<double> R;
+dVec<double> Area;
+dVec<double> chord;
+dVec<double> maxCam;       
+dVec<double> maxCamPos;
+dVec<std::vector<double>> liftCoefficient;
+dVec<std::vector<double>> rotateAngle;
+dVec<std::vector<double>> incidenceAngle;
+dVec<std::vector<double>> AoA;
+double dummyMaxCam, dummyMaxCamPos, dummyChord, dummyLiftCoefficient;
+dVec<std::vector<double>> lossCoefficient;
+dVec<std::vector<double>> pressureLoss;
+dVec<std::vector<double>> dischargeAngle;
+dVec<double> solidity;
+dVec<double> Temperature;
+dVec<double> TemperatureStag;
+dVec<double> Pressure;
+dVec<double> PressureStag;
+dVec<double> rho;
+sVec<double> psi;
+sVec<double> phi;
+sVec<double> a;
+sVec<double> b;
+sVec<double> Wr;
+sVec<double> Ws;
+dVec<double> efficiency;
+
+
 const char* argv = 
 {
 "CREATE TABLE thermoBlade ("
 "   STAGE            INT     PRIMARY KEY,"
 "   Temperature1     REAL    NOT NULL DEFAULT 0.0,"
+
 "   Temperature2     REAL    NOT NULL DEFAULT 0.0,"
 "   Temperature3     REAL    NOT NULL DEFAULT 0.0,"
 "   TemperatureStag1 REAL    NOT NULL DEFAULT 0.0,"
@@ -189,7 +238,7 @@ bool infoBlade::initConditionSetUp()
     sqlite3_close(db);
 
     return 0;
-}
+}               
 
 //only for testing
 int main()
