@@ -126,7 +126,7 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
 , lowSize( lpSize )     
 , highSize( hpSize )
 {
-    fileOut.open("output/misc/out.dat");
+    fileOut.open("output/misc/out.dat");    
     fileOut2.open("output/misc/out2.dat");
     fileOut3.open("output/misc/out3.dat");  
     fileOut4.open("output/misc/out4.dat");
@@ -276,7 +276,7 @@ Blade(dVec<double> tipP, double hub, double w1, double w2, double res, double vx
     Temperature[0][0] = T1;
     Pressure[0][0] = P1;
 
-    //initialising data for stage 1
+    //initialising data for stage 1, the order is different from the other stages, hence the isolation
     //Stagnation temperature 1 need mean alpha
     TemperatureStag[0][0] = Temperature[0][0] + 0.5 * pow( VX[0] / cos( meanAlpha[0][0] / RadToDegree ) , 2 ) / Cp ;
     //phi

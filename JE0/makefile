@@ -2,19 +2,19 @@ EXEC = thermoBlade
 
 CLIB = Flib.a -L./lib -Flib -I./include						
 
-$(EXEC): src/solvers/infoBlade/infoBlade.cpp
+$(EXEC): src/solvers/thermoBlade/thermoBladeDev.cpp
 	g++ -c lib/blockMeshGenerator/blockMeshGenerator.cpp
 	g++ -c lib/ODE_solver/solver1.cpp
 	g++ -c lib/pathFindeer/pathFindeer.cpp
 	gcc -c third_party/sqlite-amalgamation-3460100/shell.c
 	gcc -c third_party/sqlite-amalgamation-3460100/sqlite3.c
+	g++ -c src/solvers/infoBlade/infoBlade.cpp
 
-
-	ar rcs Flib.a blockMeshGenerator.o solver1.o pathFindeer.o shell.o sqlite3.o
+	ar rcs Flib.a blockMeshGenerator.o solver1.o pathFindeer.o shell.o sqlite3.o infoBlade.o
 
 	g++ -o $@ $^ $(CLIB)		
 
-	rm blockMeshGenerator.o solver1.o pathFindeer.o Flib.a shell.o sqlite3.o											
+	rm blockMeshGenerator.o solver1.o pathFindeer.o Flib.a shell.o sqlite3.o infoBlade.o									
 
 clean:
 	rm -f $(EXEC)

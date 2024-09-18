@@ -1,18 +1,26 @@
 #include "infoBlade.h"
-#include <cstdio>
 
-//TODO
-//embed the other solvers code with SQLite 
+//defininf all variables
+namespace infoBlade
+{
+int totalSize;     
+int lowSize;
+int highSize;
+double T1;
+double P1;
+double rho1;    
 
-//static variables definitions used in this source file
-int infoBlade::totalSize;     
-int infoBlade::lowSize;
-int infoBlade::highSize;
-double infoBlade::T1;
-double infoBlade::P1;
-double infoBlade::rho1;    
+std::ofstream fileOut;
+std::ofstream fileOut2;
+std::ofstream fileOut3;
+std::ofstream fileOut4;
+std::ofstream compShape;
+std::ofstream batchAnalysis[11];
 
 //other static variables
+double initHub;
+double VX[3];
+dVec<double> tip_radi;
 dVec<double> hub_radi;
 dVec<double> mean_radi;
 double omega1;
@@ -21,9 +29,6 @@ dVec<double> v;
 sVec<double> work;
 dVec<double> diffusion;
 dVec<double> numBlades;
-int lowSize;
-int highSize;
-int totalSize;
 dVec<std::vector<double>> Mach;
 dVec<std::vector<double>> alpha;
 dVec<std::vector<double>> beta;
@@ -58,37 +63,37 @@ sVec<double> b;
 sVec<double> Wr;
 sVec<double> Ws;
 dVec<double> efficiency;
-
+}
 
 const char* argv = 
 {
 "CREATE TABLE thermoBlade ("
 "   STAGE            INT     PRIMARY KEY,"
-"   Temperature1     REAL    NOT NULL DEFAULT 0.0,"
+"   Temperature1     REAL    DEFAULT 0.0,"
 
-"   Temperature2     REAL    NOT NULL DEFAULT 0.0,"
-"   Temperature3     REAL    NOT NULL DEFAULT 0.0,"
-"   TemperatureStag1 REAL    NOT NULL DEFAULT 0.0,"
-"   TemperatureStag2 REAL    NOT NULL DEFAULT 0.0,"
-"   TemperatureStag3 REAL    NOT NULL DEFAULT 0.0,"
-"   Pressure1        REAL    NOT NULL DEFAULT 0.0,"
-"   Pressure2        REAL    NOT NULL DEFAULT 0.0,"
-"   Pressure3        REAL    NOT NULL DEFAULT 0.0,"
-"   PressureStag1    REAL    NOT NULL DEFAULT 0.0,"
-"   PressureStag2    REAL    NOT NULL DEFAULT 0.0,"
-"   PressureStag3    REAL    NOT NULL DEFAULT 0.0,"
-"   rho1             REAL    NOT NULL DEFAULT 0.0,"
-"   rho2             REAL    NOT NULL DEFAULT 0.0,"
-"   rho3             REAL    NOT NULL DEFAULT 0.0,"
-"   psi              REAL    NOT NULL DEFAULT 0.0,"
-"   phi              REAL    NOT NULL DEFAULT 0.0,"
-"   a                REAL    NOT NULL DEFAULT 0.0,"
-"   b                REAL    NOT NULL DEFAULT 0.0,"
-"   Wr               REAL    NOT NULL DEFAULT 0.0,"
-"   Ws               REAL    NOT NULL DEFAULT 0.0,"
-"   efficiency1      REAL    NOT NULL DEFAULT 0.0,"
-"   efficiency2      REAL    NOT NULL DEFAULT 0.0,"  
-"   efficiency3      REAL    NOT NULL DEFAULT 0.0"  
+"   Temperature2     REAL    DEFAULT 0.0,"
+"   Temperature3     REAL    DEFAULT 0.0,"
+"   TemperatureStag1 REAL    DEFAULT 0.0,"
+"   TemperatureStag2 REAL    DEFAULT 0.0,"
+"   TemperatureStag3 REAL    DEFAULT 0.0,"
+"   Pressure1        REAL    DEFAULT 0.0,"
+"   Pressure2        REAL    DEFAULT 0.0,"
+"   Pressure3        REAL    DEFAULT 0.0,"
+"   PressureStag1    REAL    DEFAULT 0.0,"
+"   PressureStag2    REAL    DEFAULT 0.0,"
+"   PressureStag3    REAL    DEFAULT 0.0,"
+"   rho1             REAL    DEFAULT 0.0,"
+"   rho2             REAL    DEFAULT 0.0,"
+"   rho3             REAL    DEFAULT 0.0,"
+"   psi              REAL    DEFAULT 0.0,"
+"   phi              REAL    DEFAULT 0.0,"
+"   a                REAL    DEFAULT 0.0,"
+"   b                REAL    DEFAULT 0.0,"
+"   Wr               REAL    DEFAULT 0.0,"
+"   Ws               REAL    DEFAULT 0.0,"
+"   efficiency1      REAL    DEFAULT 0.0,"
+"   efficiency2      REAL    DEFAULT 0.0,"  
+"   efficiency3      REAL    DEFAULT 0.0"  
 ");"
 
 "CREATE TABLE aeroBlade ("
@@ -155,7 +160,7 @@ void openCurrentInput(std::ifstream& input)
     input.open(newPath);
 }
 
-//seets up the tables for all parameters
+//sets up the tables for all parameters
 bool infoBlade::dataBaseSetUp()
 {
     std::string tempL, tempH;
@@ -228,27 +233,21 @@ bool infoBlade::initConditionSetUp()
     infoBlade::lowSize = std::stoi(temp1);
     std::getline(input, temp1);
     infoBlade::highSize = std::stoi(temp1);
+    infoBlade::totalSize = infoBlade::lowSize + infoBlade::highSize;
     std::getline(input, temp1);
     infoBlade::T1 = std::stod(temp1);
     std::getline(input, temp1);
     infoBlade::P1 = std::stod(temp1);
     std::getline(input, temp1);
-    infoBlade::rho1 = std::stod(temp1);    
-
+    infoBlade::rho1 = std::stod(temp1);
+    std::getline(input, temp1);
+    infoBlade::initHub = std::stod(temp1);
+    std::getline(input, temp1);
+    infoBlade::resolution = std::stoi(temp1);
+    std::getline(input, temp1);
+    infoBlade::VX[0] = std::stod(temp1);
+    infoBlade::VX[1] = std::stod(temp1);                 
     sqlite3_close(db);
 
     return 0;
-}               
-
-//only for testing
-int main()
-{
-    infoBlade test;
-
-    test.dataBaseSetUp();
-    test.initConditionSetUp();
-
-    std::cout << infoBlade::rho1 << std::endl;
-
-    return 0;
-}
+}        
