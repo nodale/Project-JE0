@@ -1,6 +1,6 @@
 #include "infoBlade.h"
 
-//defininf all variables
+//defining all variables
 namespace infoBlade
 {
 int totalSize;     
