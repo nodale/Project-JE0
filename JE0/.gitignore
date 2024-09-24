@@ -1,4 +1,4 @@
-output/*.dat
+.output/*.dat
 .vscode/
 *.m
 *.asv
