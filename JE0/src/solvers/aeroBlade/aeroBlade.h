@@ -7,10 +7,12 @@
 namespace aeroBlade
 {
 
-extern std::vector<std::vector<double>> I, J, K, L;
-extern std::vector<double> Vn, Vt, phi, lambda, Sj;
+extern dVec<double> I, J, K, L;
+extern sVec<double> Vn, Vt, phi, lambda, Sj;
 
-extern std::vector<double> pointX, pointY;
+extern sVec<double> pointX, pointY, midPointX, midPointY;
+
+extern double aeroGamma; 
 
 void init();
 

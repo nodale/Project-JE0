@@ -1,15 +1,19 @@
 #include "aeroBlade.h"
+#include <cmath>
 
 //defining all variables
 
-std::vector<std::vector<double>> aeroBlade::I, aeroBlade::J, aeroBlade::K, aeroBlade::L;
-std::vector<double> aeroBlade::Vn, aeroBlade::Vt, aeroBlade::lambda, aeroBlade::phi, aeroBlade::Sj;
-std::vector<double> aeroBlade::pointX;
-std::vector<double> aeroBlade::pointY;
-double A, B, Cn, Dn, E;
+dVec<double> aeroBlade::I, aeroBlade::J, aeroBlade::K, aeroBlade::L;
+sVec<double> aeroBlade::Vn, aeroBlade::Vt, aeroBlade::lambda, aeroBlade::phi, aeroBlade::Sj;
+sVec<double> aeroBlade::pointX;
+sVec<double> aeroBlade::pointY;
+sVec<double> aeroBlade::midPointX;
+sVec<double> aeroBlade::midPointY;
+double aeroBlade::aeroGamma;
+double A, B, Cn, Dn, Ct, Dt, E;
 
 //function to inverse matrix A by means of LU decomposition method
-std::vector<std::vector<double>> inverseLU(const std::vector<std::vector<double>>& A)
+dVec<double> inverseLU(const dVec<double>& A)
 {
     std::vector<std::vector<double>> decU, decL, inverseL, inverseU, output;
     double temp = 0;
@@ -140,14 +144,14 @@ std::vector<std::vector<double>> inverseLU(const std::vector<std::vector<double>
     return output;
 }
 
-std::vector<std::vector<double>> inverseLU_v2(const std::vector<std::vector<double>>& A)
+dVec<double> inverseLU_v2(const dVec<double>& A)
 {
     int n = A.size();
-    std::vector<std::vector<double>> decU(n, std::vector<double>(n, 0));
-    std::vector<std::vector<double>> decL(n, std::vector<double>(n, 0));
-    std::vector<std::vector<double>> inverseL(n, std::vector<double>(n, 0));
-    std::vector<std::vector<double>> inverseU(n, std::vector<double>(n, 0));
-    std::vector<std::vector<double>> output(n, std::vector<double>(n, 0));
+    dVec<double> decU(n, sVec<double>(n, 0));
+    dVec<double> decL(n, sVec<double>(n, 0));
+    dVec<double> inverseL(n, sVec<double>(n, 0));
+    dVec<double> inverseU(n, sVec<double>(n, 0));
+    dVec<double> output(n, sVec<double>(n, 0));
 
     for (int i = 0; i < n; i++) 
     {
@@ -160,7 +164,7 @@ std::vector<std::vector<double>> inverseLU_v2(const std::vector<std::vector<doub
             {
                 sum += decL[i][k] * decU[k][j];
             }
-            decU[i][j] = A[i][j] - sum;
+            decU[i][j] = A[i][j] - sum;    
 
             if (i > j) 
             {
@@ -226,28 +230,36 @@ std::vector<std::vector<double>> inverseLU_v2(const std::vector<std::vector<doub
 }
 
 //function to multiply matrix inverse A with B
-std::vector<double> multiplyAB(const std::vector<std::vector<double>>& invA, const std::vector<double>& B)
+sVec<double> multiplyAB(const dVec<double>& invA, const sVec<double>& B)
 {
-    std::vector<double> C;
+    sVec<double> C;
 
-    double temp;
-    for(int i = 0; i < invA.size(); i++)
+    double temp = 0;
+    for(int i = 0; i < invA.size() - 1; i++)
     {
         for(int j = 0; j < B.size(); j++)
         {
-            if(i == j)
-            {
-                temp += PI;
-            }
-            else
-            {
-                temp += invA[i][j] * B[j];
-            }
+            temp += invA[i][j] * B[j];
         }
         C.insert(C.end(), temp);
         temp = 0;
     }
 
+    int i = invA.size() - 1;    
+    for(int j = 0; j < B.size(); j++)
+    {
+        temp += invA[i][j] * B[j];
+    }
+    aeroBlade::aeroGamma = temp;
+    temp = 0;
+
+    double tempSum = 0;
+    for(int i = 0; i < C.size(); i++)
+    {
+        tempSum += C[i];
+    }
+    std::cout << tempSum << std::endl;
+    std::cout << aeroBlade::aeroGamma << std::endl;
     return C;
 }
 
@@ -271,9 +283,9 @@ void genBlade()
     psiC = 0.012;
     backFat = 1.02;
     disX = psiA - psiC * cos( 0 );
-    disY = 0.2;
+    disY = 0.034;
     std::ofstream output("output/misc/shape.dat");
-
+                
     aeroBlade::pointX.resize(infoBlade::resolution);
     aeroBlade::pointY.resize(infoBlade::resolution);
 
@@ -363,120 +375,96 @@ void genBlade()
 
             pointX.clear();
             pointY.clear();
-
-            std::ifstream input("output/misc/shape.dat");
-            std::string temp;
-            double tempD;
-            for(int i = 0; i < infoBlade::resolution; i++)
-            {
-                std::getline(input, temp);
-                std::istringstream lineStream(temp);
-
-                lineStream >> tempD;
-                pointX.insert(pointX.end(), tempD);
-
-                lineStream >> tempD;
-                pointY.insert(pointY.end(), tempD);
-            }
         }
     }
     
 }
 
-void calculateI()
+void calculateIJ()
 {
-    double temp;
+    //std::ofstream out("output/misc/I.dat");
+    double temp, temp2;
     using namespace aeroBlade;
-    for(int i = 0; i < infoBlade::resolution; i++)
+    for(int i = 0; i < I.size(); i++)
     {
-        I[i][i] = 0.0;
-        for(int j = 0; j < infoBlade::resolution; j++)
+        for(int j = 0; j < I.size(); j++)
         {
-            if(i == j)
-            {
-                continue;
-            }
-            A = -(pointX[i] - pointX[j])*cos(phi[j]) - (pointY[i] - pointY[j])*sin(phi[j]);
-            B = pow( (pointX[i] - pointX[j]), 2) + pow( (pointY[i] - pointY[j]), 2);
+            A = -(midPointX[i] - pointX[j])*cos(phi[j]) - (midPointY[i] - pointY[j])*sin(phi[j]);
+            B = pow( (midPointX[i] - pointX[j]), 2) + pow( (midPointY[i] - pointY[j]), 2);
             Cn = sin(phi[i] - phi[j]);
-            Dn = (pointY[i] - pointY[j])*cos(phi[i]) - (pointX[i] - pointX[j])*sin(phi[i]);
-            E = sqrt(B - pow(A,2));
+            Dn = (midPointY[i] - pointY[j])*cos(phi[i]) - (midPointX[i] - pointX[j])*sin(phi[i]);
+            Ct = -cos(phi[i] - phi[j]);
+            Dt = (midPointX[i] - pointX[j])*cos(phi[i]) + (midPointY[i] - pointY[j])*sin(phi[i]);
+            E = sqrt( B - pow(A,2) );
+            if( (B - pow(A,2)) < 0 or std::isnan(E) == 1 or std::isinf(E) == 1)
+            {
+                E = 0;  
+            }
             temp = pow( Sj[j], 2) + 2 * A * Sj[j] + B;
             I[i][j] = 0.5 * Cn * log( temp / B ) + ( Dn - A * Cn ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
+            J[i][j] = 0.5 * Ct * log( temp / B ) + ( Dt - A * Ct ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
+
+            if(std::isnan(I[i][j]) == 1 || std::isinf(I[i][j]) == 1)
+            {
+                I[i][j] = 0;
+            }
+            if(std::isnan(J[i][j]) == 1 || std::isinf(J[i][j]) == 1)
+            {
+                J[i][j] = 0;
+            }   
+            if(i == j)
+            {
+                I[i][j] = 0.0;
+                J[i][j] = 0.0;
+            }
+
+            //out << I[i][j] << " ";
         }
+        //out << "\n";
     }
 }
 
-void calculateJ()
+void calculateKL()
 {
-    double temp;
-    using namespace aeroBlade;
-    for(int i = 0; i < infoBlade::resolution; i++)
-    {
-        J[i][i] = 0.0;
-        for(int j = 0; j < infoBlade::resolution; j++)
-        {
-            if(i == j)
-            {
-                continue;
-            }
-            A = -(pointX[i] - pointX[j])*cos(phi[j]) - (pointY[i] - pointY[j])*sin(phi[j]);
-            B = pow( (pointX[i] - pointX[j]), 2) + pow( (pointY[i] - pointY[j]), 2);
-            Cn = cos(phi[i] - phi[j]);
-            Dn = (pointX[i] - pointX[i])*cos(phi[j]) + (pointY[i] - pointY[j])*sin(phi[i]);
-            E = sqrt(B - pow(A,2));
-            temp = pow( Sj[j], 2) + 2 * A * Sj[j] + B;
-            J[i][j] = 0.5 * Cn * log( temp / B ) + ( Dn - A * Cn ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
-        }
-    }
-}
+    //std::ofstream out("output/misc/K.dat");
 
-void calculateK()
-{
-    double temp;
+    double temp, temp2;
     using namespace aeroBlade;
-    for(int i = 0; i < infoBlade::resolution; i++)
+    for(int i = 0; i < K.size(); i++)  
     {
-        K[i][i] = 0.0;
-        for(int j = 0; j < infoBlade::resolution; j++)
+        for(int j = 0; j < K.size(); j++)
         {
-            if(i == j)
-            {
-                continue;
-            }
-            A = -(pointX[i] - pointX[j])*cos(phi[j]) - (pointY[i] - pointY[j])*sin(phi[j]);
-            B = pow( (pointX[i] - pointX[j]), 2) + pow( (pointY[i] - pointY[j]), 2);
+            A = -(midPointX[i] - pointX[j])*cos(phi[j]) - (midPointY[i] - pointY[j])*sin(phi[j]);
+            B = pow( (midPointX[i] - pointX[j]), 2) + pow( (midPointY[i] - pointY[j]), 2);
             Cn = -cos(phi[i] - phi[j]);
-            Dn = (pointX[i] - pointX[j])*cos(phi[i]) + (pointY[i] - pointY[j])*sin(phi[i]);
-            E = sqrt(B - pow(A,2));
+            Dn = (midPointX[i] - pointX[j])*cos(phi[i]) + (midPointY[i] - pointY[j])*sin(phi[i]);
+            Ct = sin(phi[j] - phi[i]);
+            Dt = -(midPointY[i] - pointY[j])*cos(phi[i]) + (midPointX[i] - pointX[j])*sin(phi[i]);
+            E = sqrt(  std::max( B - pow(A,2), 0.0 ) );
+            if( (B - pow(A,2)) < 0 )
+            {
+                E = 0;
+            }
             temp = pow( Sj[j], 2) + 2 * A * Sj[j] + B;
             K[i][j] = 0.5 * Cn * log( temp / B ) + ( Dn - A * Cn ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
+            L[i][j] = 0.5 * Ct * log( temp / B ) + ( Dt - A * Ct ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
 
-        }
-    }
-}
-
-void calculateL()
-{
-    double temp;
-    using namespace aeroBlade;
-    for(int i = 0; i < infoBlade::resolution; i++)
-    {
-        L[i][i] = 0.0;
-        for(int j = 0; j < infoBlade::resolution; j++)
-        {
+            if(std::isnan(K[i][j]) == 1 || std::isinf(K[i][j]) == 1)
+            {
+                K[i][j] = 0;
+            }
+            if(std::isnan(L[i][j]) == 1 || std::isinf(L[i][j]) == 1)
+            {
+                L[i][j] = 0;
+            }
             if(i == j)
             {
-                continue;
+                K[i][j] = 0.0;
+                L[i][j] = 0.0;
             }
-            A = -(pointX[i] - pointX[j])*cos(phi[j]) - (pointY[i] - pointY[j])*sin(phi[j]);
-            B = pow( (pointX[i] - pointX[j]), 2) + pow( (pointY[i] - pointY[j]), 2);
-            Cn = sin(phi[i] - phi[j]);
-            Dn = (pointY[i] - pointY[j])*cos(phi[i]) - (pointX[i] - pointX[j])*sin(phi[i]);
-            E = sqrt(B - pow(A,2));
-            temp = pow( Sj[j], 2) + 2 * A * Sj[j] + B;              
-            L[i][j] = 0.5 * Cn * log( temp / B ) + ( Dn - A * Cn ) * ( atan2( ( Sj[j] + A ) , E ) - atan2( A , E ) ) / E;
+            //out << K[i][j] << " ";
         }
+        //out << "\n";
     }
 }
 
@@ -485,30 +473,43 @@ void sourceVortexPanelMethod()
 {
     using namespace aeroBlade;
     double temp;
-    int i, j;
-    std::vector<std::vector<double>> avg;
-
-    std::vector<std::vector<double>> matrixA, inverseMatrixA;
-    std::vector<double> matrixB;
+    dVec<double> avg;
+    dVec<double> matrixA, inverseMatrixA;
+    sVec<double> matrixB, aeroCp, aeroCN, aeroCA, aeroCm;
 
     double AoA = 0.0;
     double Vinf = 1.0;
 
-    for(int i = 0; i < infoBlade::resolution; i++)
+    std::ifstream input("output/misc/shape.dat");
+    std::string tempS;
+    double tempD;
+    int numPanels = infoBlade::resolution - 1;
+    int numBoundaries = infoBlade::resolution;
+    for(int i = 0; i < numBoundaries; i++)                                                  
     {
-        j = i + 1;
-        if(j >= infoBlade::resolution)
-        {
-            j = 0;
-        }
+        std::getline(input, tempS);
+        std::istringstream lineStream(tempS);
+
+        lineStream >> tempD;
+        pointX.insert(pointX.end(), tempD);
+
+        lineStream >> tempD;
+        pointY.insert(pointY.end(), tempD);
+    }
+
+    for(int i = 0; i < numPanels; i++)
+    {
+        int j = i + 1;
+
         temp = atan2( (pointY[j] - pointY[i]), (pointX[j] - pointX[i]) );
         //avg.insert(avg.end(), { pointX[i] + 0.5 * (pointX[j] - pointX[i]), pointY[i] + 0.5 * (pointY[j] - pointY[i]) });
-        phi.insert(phi.end(), temp + PI / 2);       
+        midPointX.insert(midPointX.end(), pointX[i] + 0.5 * (pointX[j] - pointX[i]) );
+        midPointY.insert(midPointY.end(), pointY[i] + 0.5 * (pointY[j] - pointY[i]) );
+        phi.insert(phi.end(), temp);       
         //std::cout << temp * RadToDegree << std::endl;
         Sj.insert(Sj.end(), sqrt( pow( pointX[j] - pointX[i], 2) + pow( pointY[j] - pointY[i], 2) ) );     
     }
-
-    temp = atan2( (pointY[0] - pointY[infoBlade::resolution - 1]), (pointX[0] - pointX[infoBlade::resolution - 1]) );
+    //temp = atan2( (pointY[0] - pointY[infoBlade::resolution - 1]), (pointX[0] - pointX[infoBlade::resolution - 1]) );
     
     //the following is for checking the normal, its a sanity check
     // std::ofstream output("output/misc/shape.dat", std::ios_base::app);      
@@ -520,70 +521,93 @@ void sourceVortexPanelMethod()
     // }
     // output.close();
 
-    I.resize(infoBlade::resolution);
-    J.resize(infoBlade::resolution);
-    K.resize(infoBlade::resolution);
-    L.resize(infoBlade::resolution);
-    for(int i = 0; i < infoBlade::resolution; i++)
+    I.resize(numPanels);
+    J.resize(numPanels);
+    K.resize(numPanels);
+    L.resize(numPanels);
+    lambda.resize(numPanels);
+    for(int i = 0; i < I.size(); i++)
     {
-        I[i].resize(infoBlade::resolution);
-        J[i].resize(infoBlade::resolution);
-        K[i].resize(infoBlade::resolution);
-        L[i].resize(infoBlade::resolution);
+        I[i].resize(numPanels);
+        J[i].resize(numPanels);
+        K[i].resize(numPanels);
+        L[i].resize(numPanels);
     }
 
-    calculateI();   
-    calculateJ();
-    calculateK();
-    calculateL();
+    calculateIJ();   
+    calculateKL();
 
-    matrixA.resize(infoBlade::resolution + 1);
-    matrixB.resize(infoBlade::resolution + 1);
+    matrixA.resize(numPanels + 1);
+    matrixB.resize(numPanels + 1);
 
-    for(int i = 0; i <= infoBlade::resolution; i++)
+    for(int i = 0; i < numPanels + 1; i++)
     {
-        matrixA[i].resize(infoBlade::resolution + 1);
+        matrixA[i].resize(numPanels + 1);
     }
 
-    for(int i = 0; i < infoBlade::resolution; i++)
+    for(int i = 0; i < numPanels; i++)
     {
         matrixB[i] = -2 * Vinf * PI * cos(phi[i] + PI / 2.0 - AoA);
-        matrixA[i][i] = PI;
-        for(int j = 0; j < infoBlade::resolution; j++)
+        for(int j = 0; j < numPanels; j++)
         {
-            if(i == j)
-            {
-                continue;
-            }
             matrixA[i][j] = I[i][j];
-            matrixA[i][infoBlade::resolution] += -K[i][j];  
+            matrixA[i][numPanels] += -K[i][j];  
             //std::cout << matrixA[i][j] << " " << i << " " << j << std::endl;      
         }
+        matrixA[i][i] = PI;
     }
 
-    double sumL;
-    for(int j = 0; j < infoBlade::resolution; j++)
+    matrixB[numPanels] = -Vinf * 2 * PI * ( sin(phi[0] + PI / 2.0 - AoA) + sin(phi[numPanels - 1] + PI / 2.0 - AoA));
+
+    double sumL = 0;
+    for(int j = 0; j < numPanels; j++)
     {
-        matrixA[infoBlade::resolution][j] = J[0][j] + J[infoBlade::resolution - 1][j];
-        sumL += L[0][j] + L[infoBlade::resolution - 1][j];
+        sumL += L[0][j] + L[numPanels - 1][j];
+        matrixA[numPanels][j] = J[0][j] + J[numPanels - 1][j];
     }
 
-    matrixA[infoBlade::resolution][infoBlade::resolution] = 2 * PI - sumL;        
-    inverseMatrixA = inverseLU_v2(matrixA);
+    matrixA[numPanels][numPanels] = 2 * PI - sumL;        
+    inverseMatrixA = inverseLU_v2(matrixA);     
 
     //outstream for sanity check
     std::ofstream out2("output/misc/matrixA.dat");
-    for(int i = 0; i <= infoBlade::resolution; i++)
+    for(int i = 0; i <= numPanels; i++)
     {
-        for(int j = 0; j <= infoBlade::resolution; j++)
+        for(int j = 0; j <= numPanels; j++)
         {
             out2 << matrixA[i][j] << " ";
         }
         out2 << "\n";
     }
-    //TODO
-    //calculate v tangetial and find pressure coefficient
+
     aeroBlade::lambda = multiplyAB(inverseMatrixA, matrixB);
+    double sumV = 0;
+    for(int i = 0; i < numPanels; i++)
+    {
+        for(int j = 0; j < numPanels; j++)
+        {
+            sumV += lambda[j] * J[i][j] / ( 2.0 * PI ) - aeroBlade::aeroGamma * L[i][j] / ( 2.0 * PI );
+        }
+        Vt.insert(Vt.end(), Vinf * sin(phi[i] + PI / 2.0 - AoA) + 0.5 * aeroBlade::aeroGamma + sumV);
+        sumV = 0;
+    }
+
+    std::ofstream CP_outstream("output/misc/Cp.dat");
+    for(int i = 0; i < numPanels; i++)
+    { 
+        int j = i + 1;
+        if( j >= numPanels)
+        {
+            j = 0;
+        }
+        aeroCp.insert(aeroCp.end(), 1.0 - pow( (Vt[i] / (double)Vinf) , 2.0 ));
+        aeroCN.insert(aeroCN.end(), -aeroCp[i] * Sj[j] * sin(phi[i] + PI / 2.0 - AoA) );
+        aeroCA.insert(aeroCA.end(), -aeroCp[i] * Sj[j] * cos(phi[i] + PI / 2.0 - AoA) );
+
+        CP_outstream << pointX[i] << " " << 1.0 - pow( (Vt[i] / (double)Vinf) , 2.0 ) << "\n";
+    }
+    CP_outstream.close();       
+
 }   
 
 void aeroBlade::init()
@@ -595,7 +619,7 @@ void aeroBlade::init()
 int main()
 {       
     infoBlade::dataBaseSetUp();
-    infoBlade::initConditionSetUp();
+    infoBlade::initConditionSetUp();    
     //thermoBlade::init();
     genBlade();
     sourceVortexPanelMethod();
