@@ -1,4 +1,4 @@
-.JE0/JE0/output/misc/*.dat
+*.dat
 .vscode/
 *.m
 *.asv

@@ -12,7 +12,7 @@ extern sVec<double> Vn, Vt, phi, lambda, Sj;
 
 extern sVec<double> pointX, pointY, midPointX, midPointY;
 
-extern double aeroGamma; 
+extern double aeroGamma, aeroCl; 
 
 void init();
 

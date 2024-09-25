@@ -9,7 +9,7 @@ sVec<double> aeroBlade::pointX;
 sVec<double> aeroBlade::pointY;
 sVec<double> aeroBlade::midPointX;
 sVec<double> aeroBlade::midPointY;
-double aeroBlade::aeroGamma;
+double aeroBlade::aeroGamma, aeroBlade::aeroCl;
 double A, B, Cn, Dn, Ct, Dt, E;
 
 //function to inverse matrix A by means of LU decomposition method
@@ -279,13 +279,13 @@ void genBlade()
     double multiplier = 1.0;
     double psiA, psiC, disX, disY, backFat;
     double U = 1.0;
-    psiA = 0.02;
+    psiA = 0.022;
     psiC = 0.012;
     backFat = 1.02;
     disX = psiA - psiC * cos( 0 );
     disY = 0.034;
     std::ofstream output("output/misc/shape.dat");
-                
+
     aeroBlade::pointX.resize(infoBlade::resolution);
     aeroBlade::pointY.resize(infoBlade::resolution);
 
@@ -303,7 +303,7 @@ void genBlade()
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
                 
                 pointX[i] = aerofoil.real();
-                pointY[i] = aerofoil.imag();    
+                pointY[i] = aerofoil.imag();          
 
                 gh -= 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 i++;
@@ -351,8 +351,8 @@ void genBlade()
                 dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
                 aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
                 
-                pointX[i] = aerofoil.real();
-                pointY[i] = aerofoil.imag();              
+                pointX[i] = 0.25 * ( aerofoil.real() + 2.0 );
+                pointY[i] = 0.25 * aerofoil.imag();              
 
                 gh += 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 i++;
@@ -475,10 +475,10 @@ void sourceVortexPanelMethod()
     double temp;
     dVec<double> avg;
     dVec<double> matrixA, inverseMatrixA;
-    sVec<double> matrixB, aeroCp, aeroCN, aeroCA, aeroCm;
+    sVec<double> matrixB, aeroCp, aeroCN, aeroCA, aeroCm, aeroCL;
 
-    double AoA = 0.0;
-    double Vinf = 1.0;
+    double AoA = 5.0 / RadToDegree;
+    double Vinf = 1.0; //infoBlade::VX[0];
 
     std::ifstream input("output/misc/shape.dat");
     std::string tempS;
@@ -592,7 +592,7 @@ void sourceVortexPanelMethod()
         sumV = 0;
     }
 
-    std::ofstream CP_outstream("output/misc/Cp.dat");
+    std::ofstream CL_outstream("output/misc/Cl.dat");
     for(int i = 0; i < numPanels; i++)
     { 
         int j = i + 1;
@@ -603,11 +603,18 @@ void sourceVortexPanelMethod()
         aeroCp.insert(aeroCp.end(), 1.0 - pow( (Vt[i] / (double)Vinf) , 2.0 ));
         aeroCN.insert(aeroCN.end(), -aeroCp[i] * Sj[j] * sin(phi[i] + PI / 2.0 - AoA) );
         aeroCA.insert(aeroCA.end(), -aeroCp[i] * Sj[j] * cos(phi[i] + PI / 2.0 - AoA) );
-
-        CP_outstream << pointX[i] << " " << 1.0 - pow( (Vt[i] / (double)Vinf) , 2.0 ) << "\n";
+        aeroCL.insert(aeroCL.end(), aeroCN[i] * cos(AoA) - aeroCA[i] * sin(AoA));
+        CL_outstream << pointX[i] << " " << aeroCL[i] << "\n";
     }
-    CP_outstream.close();       
+    CL_outstream.close();    
 
+    double sumLength = 0.0;
+    for(int i = 0; i < numBoundaries; i++)
+    {
+        sumLength += Sj[i];
+    }   
+    aeroBlade::aeroCl = sumLength * 2 * aeroBlade::aeroGamma;
+    std::cout << "total lift coefficient : " << aeroBlade::aeroCl << std::endl;
 }   
 
 void aeroBlade::init()
@@ -622,7 +629,7 @@ int main()
     infoBlade::initConditionSetUp();    
     //thermoBlade::init();
     genBlade();
-    sourceVortexPanelMethod();
+    sourceVortexPanelMethod();              
 
     return 0;
 }
