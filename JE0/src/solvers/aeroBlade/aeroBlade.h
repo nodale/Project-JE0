@@ -12,9 +12,11 @@ extern sVec<double> Vn, Vt, phi, lambda, Sj;
 
 extern sVec<double> pointX, pointY, midPointX, midPointY;
 
-extern double aeroGamma, aeroCl; 
+extern double aeroGamma, aeroCl;
 
-void init();
+void sourceVortexPanelMethod(int i, int j, int r);
+void genBlade(int j);
+void findCombinationAlpha(int sampleSize, int maxTries);
 
 };
 

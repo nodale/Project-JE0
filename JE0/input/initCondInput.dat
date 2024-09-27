@@ -1,15 +1,19 @@
 7
 0
+9000
+0
 300
 100
 1.104
 0.5
-50
+170
 69
 
-#put the information in the following order above
+#put the information in the following order
 #num of low pressure compressor stages
 #num of high pressure compressor stages
+#rpm for the low pressure compressor stages
+#rpm for the high pressure compressor stages
 #temperature1 in Kelvin
 #pressure1 in kPa
 #rho1 in kg/m3

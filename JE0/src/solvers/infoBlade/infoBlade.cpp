@@ -160,6 +160,105 @@ void openCurrentInput(std::ifstream& input)
     input.open(newPath);
 }
 
+//stores varibales into thermoBlade database
+void infoBlade::storeInThermoDatabase(sqlite3* db, std::string variablesName, double value, int stage)
+{
+    sqlite3_stmt* stmt;
+    int check;
+    std::string sqlString = "UPDATE thermoBlade SET " + variablesName + " = ? WHERE STAGE = ? ;";
+    const char* sql = sqlString.c_str();
+
+    check = sqlite3_open("output/database/db.db", &db);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed opening the database at init;\n";
+    }
+
+    check = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed preparing the statement at storeInDatabase; " << check << "\n";
+    }
+
+    //sqlite3_bind_text(stmt, 1, thermoVar.c_str(), -1, NULL);
+    sqlite3_bind_double(stmt, 1, value);
+    sqlite3_bind_int(stmt, 2, stage);
+
+    check = sqlite3_step(stmt);
+    if(check != SQLITE_OK && check != 101)  
+    {
+        std::cout << "ERROR : failed executing(step) the statement at storeInDatabase; "  << check << "\n";
+    }
+
+    sqlite3_finalize(stmt);
+}
+
+//stores varibales into thermoBlade database
+void infoBlade::storeInAeroDatabase(sqlite3* db, std::string variablesName, double value, int stage)
+{
+    sqlite3_stmt* stmt;
+    int check;
+    std::string sqlString = "UPDATE aeroBlade SET " + variablesName + " = ? WHERE STAGE = ? ;";
+    const char* sql = sqlString.c_str();
+
+    check = sqlite3_open("output/database/db.db", &db);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed opening the database at init;\n";
+    }
+
+    check = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed preparing the statement at storeInDatabase; " << check << "\n";
+    }
+
+    //sqlite3_bind_text(stmt, 1, thermoVar.c_str(), -1, NULL);
+    sqlite3_bind_double(stmt, 1, value);
+    sqlite3_bind_int(stmt, 2, stage);
+
+    check = sqlite3_step(stmt);
+    if(check != SQLITE_OK && check != 101)  
+    {
+        std::cout << "ERROR : failed executing(step) the statement at storeInDatabase; "  << check << "\n";
+    }
+
+    sqlite3_finalize(stmt);
+}
+
+//stores varibales into thermoBlade database
+void infoBlade::storeInDesignDatabase(sqlite3* db, std::string variablesName, double value, int stage)
+{
+    sqlite3_stmt* stmt;
+    int check;
+    std::string sqlString = "UPDATE desginParam SET " + variablesName + " = ? WHERE STAGE = ? ;";
+    const char* sql = sqlString.c_str();
+
+    check = sqlite3_open("output/database/db.db", &db);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed opening the database at init;\n";
+    }
+
+    check = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if(check != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed preparing the statement at storeInDatabase; " << check << "\n";
+    }
+
+    //sqlite3_bind_text(stmt, 1, thermoVar.c_str(), -1, NULL);
+    sqlite3_bind_double(stmt, 1, value);
+    sqlite3_bind_int(stmt, 2, stage);
+
+    check = sqlite3_step(stmt);
+    if(check != SQLITE_OK && check != 101)  
+    {
+        std::cout << "ERROR : failed executing(step) the statement at storeInDatabase; "  << check << "\n";
+    }
+
+    sqlite3_finalize(stmt);
+}
+
 //sets up the tables for all parameters
 bool infoBlade::dataBaseSetUp()
 {
@@ -234,6 +333,10 @@ bool infoBlade::initConditionSetUp()
     std::getline(input, temp1);
     infoBlade::highSize = std::stoi(temp1);
     infoBlade::totalSize = infoBlade::lowSize + infoBlade::highSize;
+    std::getline(input, temp1);
+    infoBlade::omega1 = std::stod(temp1);
+    std::getline(input, temp1);
+    infoBlade::omega2 = std::stod(temp1);
     std::getline(input, temp1);
     infoBlade::T1 = std::stod(temp1);
     std::getline(input, temp1);

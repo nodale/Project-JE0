@@ -118,7 +118,11 @@ namespace infoBlade
     extern double h, g;        
 
     bool dataBaseSetUp();
-    bool initConditionSetUp();                  
+    bool initConditionSetUp();    
+    void storeInThermoDatabase(sqlite3* db, std::string variablesName, double value, int stage);
+    void storeInAeroDatabase(sqlite3* db, std::string variablesName, double value, int stage);
+    void storeInDesignDatabase(sqlite3* db, std::string variablesName, double value, int stage);
+
 
 };
 

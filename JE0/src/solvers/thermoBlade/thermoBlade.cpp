@@ -40,7 +40,7 @@ void readAngles(dVec<double>& meanAlpha)
 {
     std::ifstream input("input/initialAlphaConfig.dat");
     std::string temp;
-    for(int i = 0; i < infoBlade::totalSize; i++)
+    for(int i = 0; i <= infoBlade::totalSize; i++)
     {
         std::getline(input, temp);
         meanAlpha[i][0] = std::stod(temp);
@@ -50,52 +50,17 @@ void readAngles(dVec<double>& meanAlpha)
 
 void readInputFile(sVec<double>& inputMatrix, const char* argc)
 {
-    std::filesystem::path newpath;
-    newpath = argc;
-    std::ifstream input(newpath);
 
+    std::ifstream input(argc);
     std::string temp;
     int i = 0;
     while(std::getline(input, temp))
     {
-        inputMatrix[i] = std::stod(temp); 
+        inputMatrix[i] = std::stod(temp);
         i++;
     }
 
     input.close();
-}
-
-void storeInDatabase(sqlite3* db, std::string thermoVar, double value, int stage)
-{
-    sqlite3_stmt* stmt;
-    int check;
-    std::string sqlString = "UPDATE thermoBlade SET " + thermoVar + " = ? WHERE STAGE = ? ;";
-    const char* sql = sqlString.c_str();
-
-    check = sqlite3_open("output/database/db.db", &db);
-    if(check != SQLITE_OK)
-    {
-        std::cout << "ERROR : failed opening the database at init;\n";
-    }
-
-    check = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-    if(check != SQLITE_OK)
-    {
-        std::cout << "ERROR : failed preparing the statement at storeInDatabase; " << check << "\n";
-    }
-
-    //sqlite3_bind_text(stmt, 1, thermoVar.c_str(), -1, NULL);
-    sqlite3_bind_double(stmt, 1, value);
-    sqlite3_bind_int(stmt, 2, stage);
-
-    check = sqlite3_step(stmt);
-    if(check != SQLITE_OK && check != 101)  
-    {
-        std::cout << "ERROR : failed executing(step) the statement at storeInDatabase; "  << check << "\n";
-    }
-
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
 }
 
 void storeInDatabaseRecursive(sqlite3* db)
@@ -103,39 +68,39 @@ void storeInDatabaseRecursive(sqlite3* db)
     using namespace infoBlade;
     for(int i = 0; i < infoBlade::totalSize; i++)
     {
-        storeInDatabase(db, "Temperature1", Temperature[i][0], i + 1);
-        storeInDatabase(db, "Temperature2", Temperature[i][1], i + 1);
-        storeInDatabase(db, "Temperature3", Temperature[i][2], i + 1);
+        storeInThermoDatabase(db, "Temperature1", Temperature[i][0], i + 1);
+        storeInThermoDatabase(db, "Temperature2", Temperature[i][1], i + 1);
+        storeInThermoDatabase(db, "Temperature3", Temperature[i][2], i + 1);
 
-        storeInDatabase(db, "TemperatureStag1", TemperatureStag[i][0], i + 1);
-        storeInDatabase(db, "TemperatureStag2", TemperatureStag[i][1], i + 1);
-        storeInDatabase(db, "TemperatureStag3", TemperatureStag[i][2], i + 1);
+        storeInThermoDatabase(db, "TemperatureStag1", TemperatureStag[i][0], i + 1);
+        storeInThermoDatabase(db, "TemperatureStag2", TemperatureStag[i][1], i + 1);
+        storeInThermoDatabase(db, "TemperatureStag3", TemperatureStag[i][2], i + 1);
 
-        storeInDatabase(db, "Pressure1", Pressure[i][0], i + 1);
-        storeInDatabase(db, "Pressure2", Pressure[i][1], i + 1);
-        storeInDatabase(db, "Pressure3", Pressure[i][2], i + 1);
+        storeInThermoDatabase(db, "Pressure1", Pressure[i][0], i + 1);
+        storeInThermoDatabase(db, "Pressure2", Pressure[i][1], i + 1);
+        storeInThermoDatabase(db, "Pressure3", Pressure[i][2], i + 1);
 
-        storeInDatabase(db, "PressureStag1", PressureStag[i][0], i + 1);
-        storeInDatabase(db, "PressureStag2", PressureStag[i][1], i + 1);
-        storeInDatabase(db, "PressureStag3", PressureStag[i][2], i + 1);
+        storeInThermoDatabase(db, "PressureStag1", PressureStag[i][0], i + 1);
+        storeInThermoDatabase(db, "PressureStag2", PressureStag[i][1], i + 1);
+        storeInThermoDatabase(db, "PressureStag3", PressureStag[i][2], i + 1);
         
-        storeInDatabase(db, "rho1", rho[i][0], i + 1);
-        storeInDatabase(db, "rho2", rho[i][1], i + 1);
-        storeInDatabase(db, "rho3", rho[i][2], i + 1);
+        storeInThermoDatabase(db, "rho1", rho[i][0], i + 1);
+        storeInThermoDatabase(db, "rho2", rho[i][1], i + 1);
+        storeInThermoDatabase(db, "rho3", rho[i][2], i + 1);
 
-        storeInDatabase(db, "psi", psi[i], i + 1);
+        storeInThermoDatabase(db, "psi", psi[i], i + 1);
 
-        storeInDatabase(db, "phi", phi[i], i + 1);
+        storeInThermoDatabase(db, "phi", phi[i], i + 1);
 
-        storeInDatabase(db, "a", a[i], i + 1);
-        storeInDatabase(db, "b", b[i], i + 1);
+        storeInThermoDatabase(db, "a", a[i], i + 1);
+        storeInThermoDatabase(db, "b", b[i], i + 1);
 
-        storeInDatabase(db, "Wr",Wr[i], i + 1);
-        storeInDatabase(db, "Ws",Ws[i], i + 1);
+        storeInThermoDatabase(db, "Wr",Wr[i], i + 1);
+        storeInThermoDatabase(db, "Ws",Ws[i], i + 1);
 
-        storeInDatabase(db, "efficiency1",efficiency[i][0], i + 1);
-        storeInDatabase(db, "efficiency2",efficiency[i][1], i + 1);
-        storeInDatabase(db, "efficiency3",efficiency[i][2], i + 1);
+        storeInThermoDatabase(db, "efficiency1",efficiency[i][0], i + 1);
+        storeInThermoDatabase(db, "efficiency2",efficiency[i][1], i + 1);
+        //storeInDatabase(db, "efficiency3",efficiency[i][2], i + 1);
     }
 }
 
@@ -230,6 +195,7 @@ void resizeAndReserve()
         infoBlade::solidity[i].resize(2);
     }
 
+    infoBlade::meanAlpha[infoBlade::totalSize].resize(2);
     infoBlade::alpha[infoBlade::alpha.size() - 1].resize(2);
 
     std::string tempName;   
@@ -268,10 +234,10 @@ void resizeAndReserve()
     infoBlade::alpha[infoBlade::alpha.size() - 1][0].resize(infoBlade::resolution);
     infoBlade::alpha[infoBlade::alpha.size() - 1][1].resize(infoBlade::resolution);
     
-    for(int i = 0; i <= infoBlade::resolution; i++)
+    for(int i = 0; i < infoBlade::resolution; i++)
     {
-        infoBlade::alpha[infoBlade::alpha.size() - 1][0][i] = infoBlade::meanAlpha[infoBlade::totalSize -1][0];
-        infoBlade::alpha[infoBlade::alpha.size() - 1][1][i] = infoBlade::meanAlpha[infoBlade::totalSize - 1][0];    
+        infoBlade::alpha[infoBlade::alpha.size() - 1][0][i] = infoBlade::meanAlpha[infoBlade::meanAlpha.size() - 1][0];
+        infoBlade::alpha[infoBlade::alpha.size() - 1][1][i] = infoBlade::meanAlpha[infoBlade::meanAlpha.size() - 1][0];    
     }
 
     infoBlade::Area[infoBlade::Area.size()-1].resize(2);
@@ -287,22 +253,53 @@ void resizeAndReserve()
 
 }
 
-//use this
-void thermoBlade::init()
+void getBladeElementsAngles()
 {
-    sqlite3* db;
-    int rc;
-
-    resizeAndReserve();
+    double dr1, dr2, radius1, radius2, y;
+    double tempPhi, tempVu1, tempVu2;
     using namespace infoBlade;
+    for(int i = 0; i < infoBlade::totalSize; i++)
     {
-    rc = sqlite3_open("output/database/db.db", &db);
-    if(rc != SQLITE_OK)
-    {
-        std::cout << "ERROR : failed opening the database at init;\n";
-    }
+        dr1 = ( tip_radi[i][0] - hub_radi[i][0] ) / resolution ;
+        dr2 = ( tip_radi[i][1] - hub_radi[i][1] ) / resolution ;
 
-    
+        for(int r = 0; r <= resolution; r++)
+        {
+            radius1 = hub_radi[i][0] + r * dr1;
+            radius2 = hub_radi[i][1] + r * dr2;
+            
+            y = radius1 / mean_radi[i][0]; 
+
+            tempVu1 = (a[i] - b[i] ) /y;
+            tempVu2 = (a[i] + b[i] ) /y;
+
+            if( i < lowSize)
+            {
+            tempPhi = VX[0] / ( omega1 * radius1 );
+            }
+            if(i >= lowSize)
+            {
+            tempPhi = VX[0] / ( omega2 * radius1 );  
+            }
+
+            alpha[i][0][r] = atan( tempVu1 / VX[0] ) * RadToDegree;
+            alpha[i][1][r] = atan( tempVu2 / VX[0] ) * RadToDegree;
+
+            beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
+            beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
+
+            //alpha[11][0][r] = meanAlpha[11][0];
+            //printOut(fileOut, r, alpha[i][0][r]); 
+            //printOut(fileOut2, r, alpha[i][1][r]);
+            //printOut(fileOut3, r, beta[i][0][r]);
+            //printOut(fileOut4, r, beta[i][1][r]);       
+        }
+    }
+}
+
+void thermoBlade::calculateThermoVariables()
+{
+    using namespace infoBlade;
     //initialising data for stage 1, the order is different from the other stages, hence the isolation
     //Stagnation temperature 1 need mean alpha
     TemperatureStag[0][0] = Temperature[0][0] + 0.5 * pow( VX[0] / cos( meanAlpha[0][0] / RadToDegree ) , 2 ) / Cp ;
@@ -504,9 +501,41 @@ void thermoBlade::init()
         }
         //for some reasons chord[0][0] changes here
     chord[0][0] = chord[1][0];
-    }
 
+    getBladeElementsAngles();
+
+}
+
+//use this
+void thermoBlade::init()
+{
+    sqlite3* db;
+    int rc;
+
+    resizeAndReserve();
+
+    using namespace infoBlade;
+    {
+    rc = sqlite3_open("output/database/db.db", &db);
+    if(rc != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed opening the database at init;\n";
+    }
+    
+    thermoBlade::calculateThermoVariables();
+    
     storeInDatabaseRecursive(db);
 
-    sqlite3_close(db);
+    sqlite3_close(db);  
+    } 
 }   
+
+//only for testing
+// int main()
+// {       
+//     infoBlade::dataBaseSetUp();
+//     infoBlade::initConditionSetUp();    
+//     thermoBlade::init();           
+
+//     return 0;
+// }

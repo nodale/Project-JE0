@@ -12,6 +12,31 @@ sVec<double> aeroBlade::midPointY;
 double aeroBlade::aeroGamma, aeroBlade::aeroCl;
 double A, B, Cn, Dn, Ct, Dt, E;
 
+
+//reads the aerofoilConfig.dat file
+void readConfig(double& disX, double& disY, double& backFat, int j)
+{
+    std::string temp1;
+
+    std::ifstream input("input/aerofoilConfig.dat");
+
+    std::getline(input, temp1);
+    disX = std::stod(temp1);
+    std::getline(input, temp1);
+
+    if(j == 1)
+    {
+        disY = -std::stod(temp1);
+    }
+    if(j == 0)
+    {
+        disY = std::stod(temp1);
+    }
+
+    std::getline(input, temp1);
+    backFat = std::stod(temp1);
+}
+
 //function to inverse matrix A by means of LU decomposition method
 dVec<double> inverseLU(const dVec<double>& A)
 {
@@ -253,13 +278,14 @@ sVec<double> multiplyAB(const dVec<double>& invA, const sVec<double>& B)
     aeroBlade::aeroGamma = temp;
     temp = 0;
 
-    double tempSum = 0;
-    for(int i = 0; i < C.size(); i++)
-    {
-        tempSum += C[i];
-    }
-    std::cout << tempSum << std::endl;
-    std::cout << aeroBlade::aeroGamma << std::endl;
+    //the following is for printing the sum of lambda and the gamma
+    // double tempSum = 0;
+    // for(int i = 0; i < C.size(); i++)
+    // {
+    //     tempSum += C[i];
+    // }
+    // std::cout << tempSum << std::endl;
+    // std::cout << aeroBlade::aeroGamma << std::endl;
     return C;
 }
 
@@ -268,11 +294,12 @@ std::complex<double> joukowskyTransform(std::complex<double> z, double shape, st
     return exp(thetaC) * ( z + pow(shape,2) / z) ;  
 }
 
-void genBlade()
+void aeroBlade::genBlade(int j)
 {
     std::complex<double> dummyF;
     std::complex<double> displac, aerofoil;
 
+    //default values for the aerofoil configuration
     double r, shape, extraR;
     r = 1.0;
     shape = 1.0;
@@ -282,9 +309,129 @@ void genBlade()
     psiA = 0.022;
     psiC = 0.012;
     backFat = 1.02;
-    disX = psiA - psiC * cos( 0 );
+    disX = psiA;// - psiC * cos( 0 );
     disY = 0.034;
+
+    readConfig(disX, disY, backFat, j);
+
     std::ofstream output("output/misc/shape.dat");
+
+    displac = std::complex<double>(disX, disY);
+    extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
+    using namespace aeroBlade;
+    {
+        if( (disX < 0 && disY >= 0) or (disX > 0 && disY <= 0) )
+        {
+            int i = 0;
+            for(double gh = 1.0 * ( PI ); gh >= -1.0 * ( PI );) 
+            {
+                dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
+                
+                pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag());           
+
+                gh -= 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
+                i++;
+            }
+        }
+
+        if( (disX >= 0 && disY >= 0) or (disX < 0 && disY < 0))
+        {
+            int i = 0;
+            
+            for(double gh = -2.0 * ( PI ); gh <= 0.0 * ( PI );) 
+            {
+                dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
+                
+                pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag());              
+
+                gh += 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
+                i++;
+            }
+        }
+
+        //std::cout << dist << " " << smallestPoint << std::endl;
+        //for viewing the aerofoil shape, stored in output/misc/shape.dat
+        double pivotPoint;
+        if( disX < 0)
+        {
+            pivotPoint = std::min_element(pointX.begin(), pointX.end())[0];
+            auto index = std::find(pointX.begin(),pointX.end(), pivotPoint);
+            size_t dist = std::distance(pointX.begin(), index);
+            
+            for(int i = (int)dist; i < pointX.size(); i++)
+            {
+                output << pointX[i] << " " << pointY[i] << std::endl;
+            }
+            for(int i = 0; i < (int)dist; i++)
+            {
+                output << pointX[i] << " " << pointY[i] << std::endl;
+            }
+        }
+
+        if( disX >= 0)
+        {
+            pivotPoint = std::max_element(pointX.begin(), pointX.end())[0];
+            auto index = std::find(pointX.begin(),pointX.end(), pivotPoint);
+            size_t dist = std::distance(pointX.begin(), index);     
+
+            for(int i = (int)dist; i < pointX.size(); i++)
+            {
+                output << pointX[i] << " " << pointY[i] << std::endl;
+            }
+            for(int i = 0; i < (int)dist; i++)
+            {
+                output << pointX[i] << " " << pointY[i] << std::endl;
+            }
+        }
+
+        pointX.clear();
+        pointY.clear();
+
+        std::ifstream input("output/misc/shape.dat");
+        std::string temp;
+        double tempD;
+        for(int i = 0; i < infoBlade::resolution; i++)
+        {
+            std::getline(input, temp);
+            std::istringstream lineStream(temp);
+
+            lineStream >> tempD;
+            pointX.insert(pointX.end(), tempD);
+
+            lineStream >> tempD;
+            pointY.insert(pointY.end(), tempD);
+        }
+        input.close();
+    }
+    
+}
+
+void drawEverthing(int I, int j, int R)
+{
+    std::complex<double> dummyF;
+    std::complex<double> displac, aerofoil;
+
+    //default values for the aerofoil configuration
+    double r, shape, extraR;
+    r = 1.0;
+    shape = 1.0;
+    double multiplier = 1.0;
+    double psiA, psiC, disX, disY, backFat;
+    double U = 1.0;
+    psiA = 0.022;
+    psiC = 0.012;
+    backFat = 1.02;
+    disX = psiA;// - psiC * cos( 0 );
+    disY = 0.034;
+
+    readConfig(disX, disY, backFat, j);
+
+    aeroBlade::pointX.clear();
+    aeroBlade::pointY.clear();
 
     aeroBlade::pointX.resize(infoBlade::resolution);
     aeroBlade::pointY.resize(infoBlade::resolution);
@@ -293,89 +440,54 @@ void genBlade()
     extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
     using namespace aeroBlade;
     {
-        if(disX < 0)
+        if( (disX < 0 && disY >= 0) or (disX > 0 && disY <= 0) )
         {
             int i = 0;
-            double smallestPoint;
             for(double gh = 1.0 * ( PI ); gh >= -1.0 * ( PI );) 
             {
                 dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
-                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, infoBlade::incidenceAngle[I][j][R]) / RadToDegree);
                 
-                pointX[i] = aerofoil.real();
-                pointY[i] = aerofoil.imag();          
+                pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag());           
 
                 gh -= 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 i++;
             }
-
-            smallestPoint = std::min_element(pointX.begin(), pointX.end())[0];
-            auto index = std::find(pointX.begin(),pointX.end(), smallestPoint);
-            size_t dist = std::distance(pointX.begin(), index);
-
-            //std::cout << dist << " " << smallestPoint << std::endl;
-            //for viewing the aerofoil shape, stored in output/misc/shape.dat
-            for(int i = (int)dist; i < pointX.size(); i++)
-            {
-                output << pointX[i] << " " << pointY[i] << std::endl;
-            }
-            for(int i = 0; i < (int)dist; i++)
-            {
-                output << pointX[i] << " " << pointY[i] << std::endl;
-            }
-
-            pointX.clear();
-            pointY.clear();
-
-            std::ifstream input("output/misc/shape.dat");
-            std::string temp;
-            double tempD;
-            for(int i = 0; i < infoBlade::resolution; i++)
-            {
-                std::getline(input, temp);
-                std::istringstream lineStream(temp);
-
-                lineStream >> tempD;
-                pointX.insert(pointX.end(), tempD);
-
-                lineStream >> tempD;
-                pointY.insert(pointY.end(), tempD);
-            }
         }
-        if(disX >= 0)
+
+        if( (disX >= 0 && disY >= 0) or (disX < 0 && disY < 0))
         {
             int i = 0;
-            double largestPoint;
+            
             for(double gh = -2.0 * ( PI ); gh <= 0.0 * ( PI );) 
             {
                 dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
-                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, 0.0) / RadToDegree);
+                aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, infoBlade::incidenceAngle[I][j][R]) / RadToDegree);
                 
-                pointX[i] = 0.25 * ( aerofoil.real() + 2.0 );
-                pointY[i] = 0.25 * aerofoil.imag();              
+                pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag());              
 
                 gh += 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 i++;
             }
-
-            largestPoint = std::max_element(pointX.begin(), pointX.end())[0];
-            auto index = std::find(pointX.begin(),pointX.end(), largestPoint);
-            size_t dist = std::distance(pointX.begin(), index);
-
-            //std::cout << largestPoint << std::endl;
-            //for viewing the aerofoil shape, stored in output/misc/shape.dat
-            for(int i = (int)dist; i < pointX.size(); i++)
-            {
-                output << pointX[i] << " " << pointY[i] << std::endl;
-            }
-            for(int i = 0; i < (int)dist; i++)
-            {
-                output << pointX[i] << " " << pointY[i] << std::endl;
-            }
-
-            pointX.clear();
-            pointY.clear();
         }
+
+        //std::cout << dist << " " << smallestPoint << std::endl;
+        //for viewing the aerofoil shape, stored in output/misc/shape.dat
+
+        std::ofstream output("output/misc/shapeAll.dat", std::ios_base::app);     
+        for(int i = 0; i < infoBlade::resolution; i++)
+        {
+            output << pointX[i] + I * 4.0 + j * 2.0 << " " << pointY[i] << std::endl;
+        }
+
+        output << "\n";
+
+        pointX.clear();
+        pointY.clear();
+
+        
     }
     
 }
@@ -468,8 +580,255 @@ void calculateKL()
     }
 }
 
-//only use if disX is positive
-void sourceVortexPanelMethod()
+void calculateRequiredCl()
+{
+    using namespace infoBlade;
+    for(int i = 0; i < totalSize; i++)
+    {
+    double theta, yValue;
+
+    for(int r = 0; r <= resolution; r++)
+    {
+    
+    // if(j == 0)
+    // {
+    // theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    // }
+    // if(j == 1)
+    // {
+    // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    // }
+
+    //get loss coefficients, not extremely accurate but it's alright
+    lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+    lossCoefficient[i][1][r] = 0.014 * solidity[i][1] / cos( alpha[i+1][0][r] / RadToDegree );
+
+    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+    //pressure loss is in Kpascal
+    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+    liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+    liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+    //batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
+
+    //efficiency analysis
+    //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
+    //batchAnalysis[i] << r << " " <<  dummyEfficiency << "\n";
+    }
+    }
+}
+
+void getAoA(int i, int j, int R)
+{
+    double dischargeY1, dischargeY2, dischargeX1, dischargeX2;
+    using namespace infoBlade;
+
+    dischargeAngle[i][j][R] = atan2(  aeroBlade::pointY[resolution - 2] - aeroBlade::pointY[resolution - 3] ,  aeroBlade::pointX[1] - aeroBlade::pointX[2] ) * RadToDegree;
+
+    if( j == 0)
+    {
+    rotateAngle[i][j][R] = beta[i][1][R] - dischargeAngle[i][j][R];
+    incidenceAngle[i][j][R] = beta[i][0][R] - rotateAngle[i][j][R];
+    }
+
+    if( j == 1)
+    {
+    rotateAngle[i][j][R] = alpha[i+1][0][R] - dischargeAngle[i][j][R];  
+    incidenceAngle[i][j][R] = alpha[i][1][R] - rotateAngle[i][j][R];
+    }
+
+    std::cout << "incidence angle : " << incidenceAngle[i][j][R] << std::endl;
+}
+
+void storeInDatabaseRecursive()
+{
+    sqlite3* db;
+    sqlite3_open("output/databse/db.db", &db);
+    using namespace infoBlade;
+
+    for(int i = 0; i < totalSize; i++)
+    {
+    storeInAeroDatabase(db, "meanAlpha1", meanAlpha[i][0], i + 1);
+    storeInAeroDatabase(db, "meanAlpha2", meanAlpha[i][1], i + 1);
+    storeInAeroDatabase(db, "meanBeta1", meanBeta[i][0], i + 1);
+    storeInAeroDatabase(db, "meanBeta1", meanBeta[i][1], i + 1);
+    storeInAeroDatabase(db, "PressureRatio", PR[i], i + 1);
+    storeInAeroDatabase(db, "Area1", Area[i][0], i + 1);
+    storeInAeroDatabase(db, "Area2", Area[i][1], i + 1);
+    storeInAeroDatabase(db, "Area3", Area[i][2], i + 1);
+    storeInAeroDatabase(db, "chord1", chord[i][0], i + 1);
+    storeInAeroDatabase(db, "chord2", chord[i][1], i + 1);
+    storeInAeroDatabase(db, "solidity1", solidity[i][0], i + 1);
+    storeInAeroDatabase(db, "solidity2", solidity[i][1], i + 1);
+    }
+
+    sqlite3_close(db);
+}
+
+void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
+{
+    std::uniform_int_distribution<> distr3(-70, 70); //alpha1 angles
+    float dir1, dir2;
+    double theta, smallestGradient;
+    std::random_device rd1;
+    dVec<int> suitableAlphas;
+    dVec<int> successfulAlphas;
+    sVec<double> accumulatedSmallestGradient;
+    sVec<double> localSmallestGradient;
+    sVec<double> stageSmallestGradient;
+    dVec<double> tempGradient;
+    sVec<double> suitableOmega1;
+    int tempOmega1;
+    int j = 0;
+    int tries = 0;
+    using namespace infoBlade;
+
+    tempGradient.resize(totalSize);
+    suitableAlphas.resize(sampleSize);
+
+    bool firstAttempt = true;
+
+    if(j == 0)
+    {
+        dir1 = 0.95;
+        dir2 = -0.95;
+    }
+    
+    for(int nklf = 0; nklf < sampleSize; nklf++) //sample size
+    {
+
+    for(int i = 0; i < totalSize ; i++)
+    {
+
+    for(int r = 0; r < resolution; r++)    
+    {
+    
+    tries += 1;
+    if(tries >= maxTries)
+    {
+        std::cout << "no design fits the given RPM, increase the maxTries or change the RPM\n";
+        std::terminate();
+    }
+    
+    while(true)
+    {               
+    if(j == 0)
+    {
+    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    }
+    if(j == 1)          
+    {
+    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+    }
+    
+    lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+    lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
+    
+    Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+    Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+    pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+    pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+    liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+    liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+    //std::cout << solidity[i][0] << " " << theta << " " << liftCoefficient[i][j][r] << std::endl;
+
+    if
+    (
+    theta >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0 && firstAttempt == false && 
+    theta >= 0.73 && liftCoefficient[i][1][r] <= dir1 && liftCoefficient[i][1][r] >= dir2 && solidity[i][1] <= 5.0
+    )
+    {
+        if(r > 0)
+        {
+        tempGradient[i].insert(tempGradient[i].end(), liftCoefficient[i][j][r] - liftCoefficient[i][j][r-1]);
+        }
+        if(r == resolution && i == totalSize - 1)
+        {
+            for( int g = 0; g < totalSize; g++)
+            {
+                stageSmallestGradient.insert(stageSmallestGradient.end(), std::max_element(tempGradient[g].begin(), tempGradient[g].end())[0]);
+                suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[g][0]);
+                suitableOmega1.insert(suitableOmega1.end(), tempOmega1);
+                //std::cout << stageSmallestGradient[j] << std::endl;
+            }
+            localSmallestGradient.insert(localSmallestGradient.end(), std::max_element(stageSmallestGradient.begin(), stageSmallestGradient.end())[0]);
+            
+            //std::cout << "combination no " << nklf << " passes\n";      
+
+            stageSmallestGradient.clear();
+            tempGradient.clear();
+
+            firstAttempt = true;
+            tries = 0;
+        }
+        break;
+    }
+    else                                        
+    {          
+        firstAttempt = false; 
+        tempGradient[i].clear();     
+        suitableAlphas[nklf].clear();
+
+        //int tempA = distr3(rd1) * 2;        
+        for(int m = 0; m < lowSize; m++)
+        {
+            //PR[m] = tempB;
+            //omega1 = distr2(rd1) * 15;
+            tempOmega1 = omega1;
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        //tempA = distr3(rd1) * 2;
+        for(int m = lowSize; m < totalSize; m++)
+        {
+            //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+            //omega1 = distr2(rd1) * 15;
+            meanAlpha[m][0] = distr3(rd1);
+        }
+        
+        //std::cout << "trying the following combination: " << omega1 << " //" << omega2 << " ";
+
+        thermoBlade::calculateThermoVariables();
+
+        //std::cout << "\n";
+
+        r = 0;
+        i = 0;
+    }
+
+    }
+
+    }
+    }
+
+    //accumulatedSmallestGradient.insert(accumulatedSmallestGradient.end(), std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0]);
+
+    }
+    // for(int l = 0; l < sampleSize; l++)
+    // {
+    //     std::cout << localSmallestGradient[l] << std::endl;
+    // }
+    smallestGradient = std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0];
+    auto index = std::find(localSmallestGradient.begin(),localSmallestGradient.end(), smallestGradient);
+    size_t dist = std::distance(localSmallestGradient.begin(), index);
+
+    storeInDatabaseRecursive();
+
+    for(int c = 0; c < totalSize; c++)
+    {
+        std::cout << suitableAlphas[dist][c] << std::endl;
+    }
+    
+}
+
+//only use this if disX is positive
+void aeroBlade::sourceVortexPanelMethod(int i, int j, int r)
 {
     using namespace aeroBlade;
     double temp;
@@ -477,14 +836,14 @@ void sourceVortexPanelMethod()
     dVec<double> matrixA, inverseMatrixA;
     sVec<double> matrixB, aeroCp, aeroCN, aeroCA, aeroCm, aeroCL;
 
-    double AoA = 5.0 / RadToDegree;
+    double AoA = -infoBlade::incidenceAngle[i][j][r];
     double Vinf = 1.0; //infoBlade::VX[0];
 
     std::ifstream input("output/misc/shape.dat");
     std::string tempS;
     double tempD;
     int numPanels = infoBlade::resolution - 1;
-    int numBoundaries = infoBlade::resolution;
+    int numBoundaries = infoBlade::resolution;          
     for(int i = 0; i < numBoundaries; i++)                                                  
     {
         std::getline(input, tempS);
@@ -495,6 +854,7 @@ void sourceVortexPanelMethod()
 
         lineStream >> tempD;
         pointY.insert(pointY.end(), tempD);
+
     }
 
     for(int i = 0; i < numPanels; i++)
@@ -592,7 +952,8 @@ void sourceVortexPanelMethod()
         sumV = 0;
     }
 
-    std::ofstream CL_outstream("output/misc/Cl.dat");
+    //std::ofstream CL_outstream("output/misc/Cl.dat");
+    std::ofstream CP_outstream("output/misc/Cp.dat");
     for(int i = 0; i < numPanels; i++)
     { 
         int j = i + 1;
@@ -604,32 +965,47 @@ void sourceVortexPanelMethod()
         aeroCN.insert(aeroCN.end(), -aeroCp[i] * Sj[j] * sin(phi[i] + PI / 2.0 - AoA) );
         aeroCA.insert(aeroCA.end(), -aeroCp[i] * Sj[j] * cos(phi[i] + PI / 2.0 - AoA) );
         aeroCL.insert(aeroCL.end(), aeroCN[i] * cos(AoA) - aeroCA[i] * sin(AoA));
-        CL_outstream << pointX[i] << " " << aeroCL[i] << "\n";
+        //CL_outstream << pointX[i] << " " << aeroCL[i] << "\n";
+        CP_outstream << pointX[i] << " " << aeroCp[i] << "\n";
     }
-    CL_outstream.close();    
+    //CL_outstream.close();    
+    CP_outstream.close();    
 
     double sumLength = 0.0;
     for(int i = 0; i < numBoundaries; i++)
     {
-        sumLength += Sj[i];
+        sumLength += Sj[i];         
     }   
     aeroBlade::aeroCl = sumLength * 2 * aeroBlade::aeroGamma;
-    std::cout << "total lift coefficient : " << aeroBlade::aeroCl << std::endl;
-}   
 
-void aeroBlade::init()
-{
-    
-}
+    std::cout << "total lift coefficient : " << aeroBlade::aeroCl << std::endl;
+
+}   
 
 //only for testing  
 int main()
 {       
     infoBlade::dataBaseSetUp();
     infoBlade::initConditionSetUp();    
-    //thermoBlade::init();
-    genBlade();
-    sourceVortexPanelMethod();              
+    thermoBlade::init();
+    
+    storeInDatabaseRecursive();
+
+    int r = infoBlade::resolution / 2;
+
+    aeroBlade::findCombinationAlpha(5,100000);
+
+    for(int j = 0; j < 2; j++)
+    {
+        for(int i = 0; i < infoBlade::totalSize; i++)
+        {
+        aeroBlade::genBlade(j);
+        getAoA(i, j, r);
+        aeroBlade::sourceVortexPanelMethod(i, j ,r); 
+        drawEverthing(i, j, r);                          
+        }
+    }
+    //calculateRequiredCl();   
 
     return 0;
 }
