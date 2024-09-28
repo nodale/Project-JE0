@@ -15,7 +15,7 @@ $(EXEC): src/solvers/aeroBlade/aeroBlade.cpp
 
 	ar rcs Flib.a blockMeshGenerator.o solver1.o pathFindeer.o shell.o sqlite3.o infoBlade.o thermoBlade.o
 
-	g++ -o $@ $^ $(CLIB)		
+	g++ -O2 -march=native -o $@ $^ $(CLIB)		
 
 	rm blockMeshGenerator.o solver1.o pathFindeer.o Flib.a shell.o sqlite3.o infoBlade.o thermoBlade.o					
 

@@ -1,6 +1,6 @@
 7
 0
-9000
+6000
 0
 300
 100
@@ -16,7 +16,7 @@
 #rpm for the high pressure compressor stages
 #temperature1 in Kelvin
 #pressure1 in kPa
-#rho1 in kg/m3
+#rho1 in kg/m3      
 #initial radius of the hub at stage 1
 #resolution            
 #air speed at stage 1

@@ -17,6 +17,8 @@ extern double aeroGamma, aeroCl;
 void sourceVortexPanelMethod(int i, int j, int r);
 void genBlade(int j);
 void findCombinationAlpha(int sampleSize, int maxTries);
+void drawDeHallersNumber();
+void drawDeHallersNumber_v2();
 
 };
 

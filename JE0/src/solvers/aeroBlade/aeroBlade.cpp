@@ -669,8 +669,109 @@ void storeInDatabaseRecursive()
     sqlite3_close(db);
 }
 
+void aeroBlade::drawDeHallersNumber()
+{
+    std::ofstream out;
+    std::string path;
+    double theta;
+
+    std::string gnuCommand = "#!/usr/bin/gnuplot -persist\nplot ";
+    std::string generateExecutable;
+
+    for(int j = 0; j < 2; j++)
+    {   
+        for(int i = 0; i < infoBlade::totalSize; i++)
+        {
+            path = "output/batchData/" + std::to_string(i) + "_" + std::to_string(j) + ".dat";
+            out.open(path);
+            using namespace infoBlade;
+            for(int r = 0; r < infoBlade::resolution; r++)
+            {
+                if(j == 0)
+                {
+                    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+                }
+                if(j == 1)          
+                {
+                    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+                }
+
+                lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+                lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
+                
+                Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+                Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+                pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+                pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+                liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+                liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+                out << theta << " " << infoBlade::liftCoefficient[i][j][r] << "\n";
+            }
+            out.close();
+
+            gnuCommand += "'output/batchData/" + std::to_string(i) + "_" + std::to_string(j) + ".dat"+ "' with linespoints linetype -1 linewidth 2 lc rgb '#6194B',";
+        }
+    }
+
+    generateExecutable = "echo \"" + gnuCommand + "\" > bin/drawDeHaller.sh";
+
+    std::system("touch bin/drawDeHaller.sh\n chmod +x bin/drawDeHaller.sh");
+    std::system(generateExecutable.c_str());
+
+}
+
+void aeroBlade::drawDeHallersNumber_v2()
+{
+    std::ofstream out;
+    std::string path;
+    double theta, deltaBeta;
+
+    std::string gnuCommand = "#!/usr/bin/gnuplot -persist\nplot ";
+    std::string generateExecutable;
+
+    for(int j = 0; j < 2; j++)
+    {   
+        for(int i = 0; i < infoBlade::totalSize; i++)
+        {
+            path = "output/batchData/" + std::to_string(i) + "_" + std::to_string(j) + ".dat";
+            out.open(path);
+            using namespace infoBlade;
+            for(int r = 0; r < infoBlade::resolution; r++)
+            {
+                if(j == 0)
+                {
+                    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+                    deltaBeta = beta[i][0][r]/RadToDegree - beta[i][1][r]/RadToDegree;
+                    liftCoefficient[i][0][r] = 2 * deltaBeta * work[i] * R[i] / chord[i][j];
+                }
+                if(j == 1)          
+                {
+                    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+                    deltaBeta = beta[i][1][r]/RadToDegree - beta[i + 1][0][r]/RadToDegree;
+                    liftCoefficient[i][1][r] = 2 * deltaBeta * work[i] * ( 1.0 - R[i] ) / chord[i][j];
+                }
+
+                out << theta << " " << infoBlade::liftCoefficient[i][j][r] << "\n";
+            }
+            out.close();
+
+            gnuCommand += "'output/batchData/" + std::to_string(i) + "_" + std::to_string(j) + ".dat"+ "' with linespoints linetype -1 linewidth 2 lc rgb '#6194B',";
+        }
+    }
+
+    generateExecutable = "echo \"" + gnuCommand + "\" > bin/drawDeHaller.sh";
+
+    std::system("touch bin/drawDeHaller.sh\n chmod +x bin/drawDeHaller.sh");
+    std::system(generateExecutable.c_str());
+
+}
+
 void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
 {
+    std::uniform_int_distribution<> distr2(20, 40); //omega1
     std::uniform_int_distribution<> distr3(-70, 70); //alpha1 angles
     float dir1, dir2;
     double theta, smallestGradient;
@@ -694,8 +795,8 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
 
     if(j == 0)
     {
-        dir1 = 0.95;
-        dir2 = -0.95;
+        dir1 = 1.8;
+        dir2 = -1.8;
     }
     
     for(int nklf = 0; nklf < sampleSize; nklf++) //sample size
@@ -711,6 +812,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     if(tries >= maxTries)
     {
         std::cout << "no design fits the given RPM, increase the maxTries or change the RPM\n";
+        std::cout << "number of combinations found so far : " << nklf << std::endl;
         std::terminate();
     }
     
@@ -737,12 +839,12 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
 
-    //std::cout << solidity[i][0] << " " << theta << " " << liftCoefficient[i][j][r] << std::endl;
+    std::cout << solidity[i][0] << " " << solidity[i][1] << " " << theta << " " << liftCoefficient[i][0][r] << " " << liftCoefficient[i][1][r] << std::endl;
 
     if
     (
-    theta >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0 && firstAttempt == false && 
-    theta >= 0.73 && liftCoefficient[i][1][r] <= dir1 && liftCoefficient[i][1][r] >= dir2 && solidity[i][1] <= 5.0
+    theta >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0
+     && firstAttempt == false && liftCoefficient[i][1][r] <= dir1 && liftCoefficient[i][1][r] >= dir2 && solidity[i][1] <= 5.0
     )
     {
         if(r > 0)
@@ -780,7 +882,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
         for(int m = 0; m < lowSize; m++)
         {
             //PR[m] = tempB;
-            //omega1 = distr2(rd1) * 15;
+            omega1 = distr2(rd1) * 200;
             tempOmega1 = omega1;
             meanAlpha[m][0] = distr3(rd1);
         }
@@ -788,7 +890,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
         for(int m = lowSize; m < totalSize; m++)
         {
             //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-            //omega1 = distr2(rd1) * 15;
+            omega1 = distr2(rd1) * 200;
             meanAlpha[m][0] = distr3(rd1);
         }
         
@@ -824,6 +926,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     {
         std::cout << suitableAlphas[dist][c] << std::endl;
     }
+    std::cout << omega1 << std::endl;
     
 }
 
@@ -988,23 +1091,23 @@ int main()
     infoBlade::dataBaseSetUp();
     infoBlade::initConditionSetUp();    
     thermoBlade::init();
-    
+    aeroBlade::drawDeHallersNumber();
     storeInDatabaseRecursive();
 
     int r = infoBlade::resolution / 2;
 
-    aeroBlade::findCombinationAlpha(5,100000);
+    //aeroBlade::findCombinationAlpha(5,10000000);
 
-    for(int j = 0; j < 2; j++)
-    {
-        for(int i = 0; i < infoBlade::totalSize; i++)
-        {
-        aeroBlade::genBlade(j);
-        getAoA(i, j, r);
-        aeroBlade::sourceVortexPanelMethod(i, j ,r); 
-        drawEverthing(i, j, r);                          
-        }
-    }
+    // for(int j = 0; j < 2; j++)
+    // {
+    //     for(int i = 0; i < infoBlade::totalSize; i++)
+    //     {
+    //     aeroBlade::genBlade(j);
+    //     getAoA(i, j, r);
+    //     aeroBlade::sourceVortexPanelMethod(i, j ,r); 
+    //     drawEverthing(i, j, r);                          
+    //     }
+    // }
     //calculateRequiredCl();   
 
     return 0;

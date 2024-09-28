@@ -125,7 +125,7 @@ void resizeAndReserve()
     infoBlade::Mach.resize(infoBlade::totalSize);
 
     infoBlade::alpha.resize(infoBlade::totalSize + 1);
-    infoBlade::beta.resize(infoBlade::totalSize);
+    infoBlade::beta.resize(infoBlade::totalSize + 1);
     infoBlade::meanAlpha.resize(infoBlade::totalSize + 1);
     infoBlade::meanBeta.resize(infoBlade::totalSize);
     infoBlade::PR.resize(infoBlade::totalSize);
@@ -197,6 +197,7 @@ void resizeAndReserve()
 
     infoBlade::meanAlpha[infoBlade::totalSize].resize(2);
     infoBlade::alpha[infoBlade::alpha.size() - 1].resize(2);
+    infoBlade::beta[infoBlade::beta.size() - 1].resize(2);
 
     std::string tempName;   
     
@@ -233,6 +234,9 @@ void resizeAndReserve()
 
     infoBlade::alpha[infoBlade::alpha.size() - 1][0].resize(infoBlade::resolution);
     infoBlade::alpha[infoBlade::alpha.size() - 1][1].resize(infoBlade::resolution);
+
+    infoBlade::beta[infoBlade::beta.size() - 1][0].resize(infoBlade::resolution);
+    infoBlade::beta[infoBlade::beta.size() - 1][1].resize(infoBlade::resolution);
     
     for(int i = 0; i < infoBlade::resolution; i++)
     {
