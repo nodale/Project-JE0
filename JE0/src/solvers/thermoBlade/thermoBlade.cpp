@@ -12,7 +12,7 @@ void readTipRadius(dVec<double>& tipRadius)
         for(int j = 0; j < 3; j++)
         {
             lineStream >> tempD;
-            tipRadius[i].insert(tipRadius[i].end(), tempD);
+            tipRadius[i].insert(tipRadius[i].begin() + j, tempD);
         }
     }
     input.close();
@@ -107,7 +107,7 @@ void storeInDatabaseRecursive(sqlite3* db)
 void resizeAndReserve()
 {
     infoBlade::fileOut.open("output/misc/out.dat");    
-    infoBlade::fileOut2.open("output/misc/out2.dat");
+    infoBlade::fileOut2.open("output/misc/out2.dat");   
     infoBlade::fileOut3.open("output/misc/out3.dat");  
     infoBlade::fileOut4.open("output/misc/out4.dat");
     infoBlade::compShape.open("output/misc/shape.dat");
@@ -130,6 +130,7 @@ void resizeAndReserve()
     infoBlade::meanBeta.resize(infoBlade::totalSize);
     infoBlade::PR.resize(infoBlade::totalSize);
     infoBlade::R.resize(infoBlade::totalSize);
+    infoBlade::Ry.resize(infoBlade::totalSize);
     infoBlade::Area.resize(infoBlade::totalSize + 1);
     infoBlade::chord.resize(infoBlade::totalSize);
     infoBlade::maxCam.resize(infoBlade::totalSize);       
@@ -159,13 +160,12 @@ void resizeAndReserve()
 
     for(int i = 0; i < infoBlade::totalSize; i++)
     {
-        infoBlade::tip_radi[i].resize(3);
-        infoBlade::tip_radi[i].resize(3);
         infoBlade::hub_radi[i].resize(3);
         infoBlade::mean_radi[i].resize(3);
         infoBlade::v[i].resize(3);
         infoBlade::diffusion[i].resize(2);
         infoBlade::numBlades[i].resize(2);
+        infoBlade::Ry[i].resize(infoBlade::resolution);
 
         infoBlade::Mach[i].resize(2);
 
@@ -203,9 +203,9 @@ void resizeAndReserve()
     
     readTipRadius(infoBlade::tip_radi);
     readChordLengths(infoBlade::chord);
+    readInputFile(infoBlade::R, "input/degreeOfReactionConfig.dat");
     readInputFile(infoBlade::PR, "input/compressionRatioConfig.dat");
     readAngles(infoBlade::meanAlpha);
-    readInputFile(infoBlade::R, "input/degreeOfReaction.dat");
     
     for(int i = 0; i < infoBlade::totalSize; i++)
     {
@@ -277,6 +277,16 @@ void getBladeElementsAngles()
             tempVu1 = (a[i] - b[i] ) /y;
             tempVu2 = (a[i] + b[i] ) /y;
 
+            // tempVu1 = 0.0;
+            // if(i < lowSize)
+            // {
+            // tempVu2 = work[i] / (omega1 * radius2);
+            // }
+            // if(i >= lowSize)
+            // {
+            // tempVu2 = work[i] / (omega2 * radius2);
+            // }
+
             if( i < lowSize)
             {
             tempPhi = VX[0] / ( omega1 * radius1 );
@@ -292,6 +302,8 @@ void getBladeElementsAngles()
             beta[i][0][r] = atan( tan( alpha[i][0][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
             beta[i][1][r] = atan( tan( alpha[i][1][r] / RadToDegree ) - 1 / tempPhi ) * RadToDegree;
 
+            Ry[i][r] = 1.0 - ( 1.0 - R[i] ) / pow( y     , 2.0);
+
             //alpha[11][0][r] = meanAlpha[11][0];
             //printOut(fileOut, r, alpha[i][0][r]); 
             //printOut(fileOut2, r, alpha[i][1][r]);
@@ -305,6 +317,8 @@ void thermoBlade::calculateThermoVariables()
 {
     using namespace infoBlade;
     //initialising data for stage 1, the order is different from the other stages, hence the isolation
+    //Initial mean radius
+    mean_radi[0][0] = (tip_radi[0][0] - initHub) / 2.0 + initHub;
     //Stagnation temperature 1 need mean alpha
     TemperatureStag[0][0] = Temperature[0][0] + 0.5 * pow( VX[0] / cos( meanAlpha[0][0] / RadToDegree ) , 2 ) / Cp ;
     //phi
@@ -510,7 +524,196 @@ void thermoBlade::calculateThermoVariables()
 
 }
 
-//use this
+void thermoBlade::calculateThermoVariables_v2()
+{
+    using namespace infoBlade;
+    //initialising data for stage 1, the order is different from the other stages, hence the isolation
+    //Initial mean radius
+    mean_radi[0][0] = (tip_radi[0][0] - initHub) / 2.0 + initHub;
+    //Stagnation temperature 1 need mean alpha
+    TemperatureStag[0][0] = Temperature[0][0] + 0.5 * pow( VX[0] / cos( meanAlpha[0][0] / RadToDegree ) , 2 ) / Cp ;
+    //phi
+    phi[0] =  VX[0] / ( omega1 * mean_radi[0][0] );
+    //beta 1
+    meanBeta[0][0] = atan( tan( meanAlpha[0][0] / RadToDegree ) - 1 / phi[0] ) * RadToDegree;
+    //Temperature 3
+    Temperature[0][2] = Temperature[0][0] * pow( ( PR[0] ) , ( gamma - 1 ) / gamma );
+    //Stagnation temperature 3 need mean alpha
+    TemperatureStag[0][2] = Temperature[0][2] + 0.5 * pow( VX[0] / cos( meanAlpha[1][0] / RadToDegree ) , 2 ) / Cp;
+    //Stagnation pressure  1
+    PressureStag[0][0] = Pressure[0][0] * pow( ( TemperatureStag[0][0] / Temperature[0][0] ) , gamma / ( gamma - 1 ) );
+    //Stagnation pressure 3
+    PressureStag[0][2] = PressureStag[0][0] * PR[0];
+    //Temperature stagnation 2
+    work[0] = Cp * ( TemperatureStag[0][2] - TemperatureStag[0][0] );
+    TemperatureStag[0][1] = TemperatureStag[0][0] + ( R[0] * work[0] / Cp );
+    //Pressure 2
+    Pressure[0][1] = Pressure[0][0] * pow( ( TemperatureStag[0][1] / TemperatureStag[0][0] ) , gamma / ( gamma - 1 ) );
+    //Stagnation pressure 2
+    PressureStag[0][1] = PressureStag[0][0] * pow( ( TemperatureStag[0][1] / TemperatureStag[0][0] ) , gamma / ( gamma - 1 ) );
+    //psi
+    psi[0] = work[0] / pow( omega1 * mean_radi[0][0] , 2 );
+    //alpha 2
+    meanAlpha[0][1] = atan2( psi[0] , phi[0] * WDF[0] ) * RadToDegree;
+    //beta 2
+    meanBeta[0][1] = atan( tan( meanAlpha[0][1] / RadToDegree ) - 1 / phi[0] ) * RadToDegree;
+    //Temperature 2
+    Temperature[0][1] = TemperatureStag[0][1] - 0.5 * pow(  VX[0] / cos( meanAlpha[0][1] / RadToDegree ) , 2 ) / Cp;
+    //Pressure 2
+    Pressure[0][1] = Pressure[0][0] * pow( ( Temperature[0][1] / Temperature[0][0] ) , gamma / ( gamma - 1 ) );
+    //Pressure 3 need mean alpha
+    Pressure[0][2] = PressureStag[0][2] * pow( ( TemperatureStag[0][2] / Temperature[0][2] ) , -gamma / ( gamma - 1 ) );
+    //Area stag 1, station 1
+    Area[0][0] = PI * (  pow( tip_radi[0][0] , 2 ) - pow( hub_radi[0][0] , 2 ) );
+
+    //rho 1,2,3
+    for(int i = 0; i < 3; i++)
+    {
+    rho[0][i] = 1000 * Pressure[0][i] / ( 287 * Temperature[0][i] );
+    }
+
+    for(int i = 1; i < 3; i++)
+    {
+    Area[0][i] = Area[0][i-1] * ( rho[0][i-1] / rho[0][i] );
+    }
+
+    Area[1][0] = Area[0][2];
+
+    for(int i = 0; i < 3; i++)
+    {
+    hub_radi[0][i] = sqrt( -( Area[0][i] / PI ) + pow( tip_radi[0][i] , 2 )  ); 
+    }
+
+    for(int i = 1; i < 3; i++)
+    {
+    mean_radi[0][i] = 0.5 * ( tip_radi[0][0] + hub_radi[0][0] );
+    }
+
+    //solidity[0] = ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] );
+    // solidity[0][0] = 0.5 * ( ( tan(meanBeta[0][0]/RadToDegree) - tan(meanBeta[0][1]/RadToDegree) ) ) / ( ( diffusion[0][0] - ( 1.0 - ( cos(meanBeta[0][0]/RadToDegree) / cos( meanBeta[0][1]/RadToDegree ) ) ) ) / cos(meanBeta[0][0]/RadToDegree) ); 
+    // solidity[0][1] = 0.5 * ( ( tan(meanAlpha[0][1]/RadToDegree) - tan(meanAlpha[1][0]/RadToDegree) ) ) / ( ( diffusion[0][1] - ( 1.0 - ( cos(meanAlpha[1][0]/RadToDegree) / cos( meanAlpha[0][1]/RadToDegree ) ) ) ) / cos(meanAlpha[0][1]/RadToDegree) ); 
+    solidity[0][0] = fabs( ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] ) );
+    solidity[0][1] = fabs( ( 1.5 * psi[0] ) / ( 1.55 * phi[0] - psi[0] ) );
+
+
+    numBlades[0][0] = 2 * PI * mean_radi[0][0] / ( chord[0][0] / solidity[0][0] );  
+    numBlades[0][1] = 2 * PI * mean_radi[0][1] / ( chord[0][1] / solidity[0][1] );
+
+    chord[0][0] = solidity[0][0] * 2 * PI * mean_radi[0][0] / numBlades[0][0];
+    chord[0][1] = solidity[0][1] * 2 * PI * mean_radi[0][1] / numBlades[0][1];
+
+    a[0] = 0.5 * (mean_radi[0][1] + mean_radi[0][0]) * omega1 * ( 1.0 - R[0] );             
+    b[0] = work[0] / ( (mean_radi[0][1] + mean_radi[0][0]) * omega1);
+
+    for(int i = 1; i < totalSize; i++)
+    {
+        //copying data from station 3 of the previous stage to station 1 of current stage
+        TemperatureStag[i][0] = TemperatureStag[i-1][2];
+        PressureStag[i][0] = PressureStag[i-1][2];
+        Temperature[i][0] = Temperature[i-1][2];
+        Pressure[i][0] = Pressure[i-1][2];
+        rho[i][0] = rho[i-1][0];    
+        mean_radi[i][0] = mean_radi[i-1][2];
+        hub_radi[i][0] = hub_radi[i-1][2];
+        
+        //phi
+        if( i < lowSize )
+        {
+        phi[i] =  VX[0] / ( omega1 * mean_radi[i][0] );
+        }
+        if( i >= lowSize )
+        {
+        phi[i] =  VX[0] / ( omega2 * mean_radi[i][0] );
+        }
+
+        //beta 1
+        meanBeta[i][0] = atan( tan( meanAlpha[i][0] / RadToDegree ) - 1 / phi[i] ) * RadToDegree;
+        //Temperature 3
+        Temperature[i][2] = Temperature[i][0] * pow( ( PR[i] ) , ( gamma - 1 ) / gamma );
+        //Stagnation temperature 3, needs mean alpha
+        TemperatureStag[i][2] = Temperature[i][2] + 0.5 * pow( VX[0] / cos( meanAlpha[i+1][0] / RadToDegree ) , 2 ) / Cp;
+        //Stagnation pressure 3
+        PressureStag[i][2] = PressureStag[i][0] * PR[i];
+        //Temperature stagnation 2
+        work[i] = Cp * ( TemperatureStag[i][2] - TemperatureStag[i][0] );
+        TemperatureStag[i][1] = TemperatureStag[i][0] + ( R[i] * work[i] / Cp );
+        //Pressure 2
+        Pressure[i][1] = Pressure[i][0] * pow( ( TemperatureStag[i][1] / TemperatureStag[i][0] ) , gamma / ( gamma - 1 ) );
+        //Stagnation pressure 2
+        PressureStag[i][1] = PressureStag[i][0] * pow( ( TemperatureStag[i][1] / TemperatureStag[i][0] ) , gamma / ( gamma - 1 ) );
+        //psi
+        if( i < lowSize ) 
+        {
+        psi[i] = work[i] / pow( omega1 * mean_radi[i][0] , 2 );
+        }
+        if( i >= lowSize )
+        {
+        psi[i] = work[i] / pow( omega2 * mean_radi[i][0] , 2 );
+        }
+        //alpha 2
+        meanAlpha[i][1] = atan2( psi[i] , phi[i] ) * RadToDegree;
+        //beta 2
+        
+        meanBeta[i][1] = atan( tan( meanAlpha[i][1] / RadToDegree ) - 1 / phi[i] ) * RadToDegree;
+        //Temperature 2
+        Temperature[i][1] = TemperatureStag[i][1] - 0.5 * pow(  VX[0] / cos( meanAlpha[i][1] / RadToDegree ) , 2 ) / Cp;
+        //Pressure 2
+        Pressure[i][1] = Pressure[i][0] * pow( ( Temperature[i][1] / Temperature[i][0] ) , gamma / ( gamma - 1 ) );
+        //Pressure 3, needs mean alpha
+        Pressure[i][2] = PressureStag[i][2] * pow( ( TemperatureStag[i][2] / Temperature[i][2] ) , -gamma / ( gamma - 1 ) );
+        //Area station 1
+        Area[i][0] = Area[i-1][2];
+
+        //rho 1,2,3
+        for(int j = 0; j < 3; j++)
+        {
+        rho[i][j] = 1000 * Pressure[i][j] / ( 287 * Temperature[i][j] );
+        }
+
+        for(int j = 1; j < 3; j++)
+        {
+        Area[i][j] = Area[i][j-1] * ( rho[i][j-1] / rho[i][j] );
+        }
+
+        Area[i+1][0] = Area[i][2];
+
+        for(int j = 0; j < 3; j++)
+        {
+        hub_radi[i][j] = pow( -( Area[i][j] / PI ) + pow( tip_radi[i][j] , 2 ) , 0.5  ); 
+        }
+
+        for(int j = 1; j < 3; j++)
+        {
+        mean_radi[i][j] = 0.5 * ( tip_radi[i][j] + hub_radi[i][j] );                                
+        }
+
+        //solidity[i] = fabs( ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] ) );
+        // solidity[i][0] = 0.5 * ( ( tan(meanBeta[i][0]/RadToDegree) - tan(meanBeta[i][1]/RadToDegree) ) ) / ( ( diffusion[i][0] - ( 1.0 - ( cos(meanBeta[i][0]/RadToDegree) / cos( meanBeta[i][1]/RadToDegree ) ) ) ) / cos(meanBeta[i][0]/RadToDegree) );   
+        // solidity[i][1] = 0.5 * ( ( tan(meanAlpha[i][1]/RadToDegree) - tan(meanAlpha[i+1][0]/RadToDegree) ) ) / ( ( diffusion[i][1] - ( 1.0 - ( cos(meanAlpha[i+1][0]/RadToDegree) / cos( meanAlpha[i][1]/RadToDegree ) ) ) ) / cos(meanAlpha[i][1]/RadToDegree) ); 
+
+        solidity[i][0] = fabs( ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] ) );
+        solidity[i][1] = fabs( ( 1.5 * psi[i] ) / ( 1.55 * phi[i] - psi[i] ) );
+
+        numBlades[i][0] = 2 * PI * mean_radi[i][0] / ( chord[i][0] / solidity[i][0] );
+        numBlades[i][1] = 2 * PI * mean_radi[i][1] / ( chord[i][1] / solidity[i][1] );
+
+        chord[i][0] = solidity[i][0] * 2 * PI * mean_radi[i][0] / numBlades[i][0];
+        chord[i][1] = solidity[i][1] * 2 * PI * mean_radi[i][1] / numBlades[i][1];
+
+        //std::cout << TemperatureStag[i][0] << " " << PressureStag[i][0]  << " " << PressureStag[i][2] << std::endl;
+
+        a[i] = 0.5 * (mean_radi[i][1] + mean_radi[i][0]) * omega1 * ( 1.0 - R[i] );             
+        b[i] = work[i] / ( (mean_radi[i][1] + mean_radi[i][0]) * omega1);
+
+        }
+        //for some reasons chord[0][0] changes here
+    chord[0][0] = chord[1][0];
+
+    getBladeElementsAngles();
+
+}
+
+//use this  
 void thermoBlade::init()
 {
     sqlite3* db;
@@ -526,7 +729,7 @@ void thermoBlade::init()
         std::cout << "ERROR : failed opening the database at init;\n";
     }
     
-    thermoBlade::calculateThermoVariables();
+    thermoBlade::calculateThermoVariables_v2();
     
     storeInDatabaseRecursive(db);
 

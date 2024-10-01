@@ -3,30 +3,28 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <iomanip>
 
-class blockMeshGen
+namespace blockMeshGen
 {
 
-std::ofstream out;
-std::ofstream bmD;
-std::ofstream bmB;
-std::ofstream CFDFolder;
+extern std::ofstream out;
+extern std::ofstream bmD;
+extern std::ofstream bmB;
+extern std::ofstream CFDFolder;
 
-std::vector<std::vector<double>> vertices;
-std::vector<std::vector<double>> boundary;
-std::vector<std::vector<double>> brick;
-std::vector<std::vector<double>> interpolatePoints;
+extern std::vector<std::vector<double>> vertices;
+extern std::vector<std::vector<double>> boundary;
+extern std::vector<std::vector<double>> brick;
+extern std::vector<std::vector<double>> interpolatePoints;
 
-double separationVector;
+extern double separationVector;
 
-
-std::vector<std::vector<double>> tempValue;
-double tempLine[2][3];
-double tempPerpendicular[3];
-double tempNormal[3];
-double tempLength;
-
-public:
+extern std::vector<std::vector<double>> tempValue;
+extern double tempLine[2][3];
+extern double tempPerpendicular[3];
+extern double tempNormal[3];
+extern double tempLength;
 
 void init(char* target);
 void collectVertices(double x, double y, double r);
@@ -62,7 +60,6 @@ void generateControlDict();
 
 void clear();
 
-private:
 
 void generateFacesVerticesS(int resolution);
 void generateFacesVerticesB(int resolution);

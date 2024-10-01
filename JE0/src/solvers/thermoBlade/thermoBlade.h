@@ -9,6 +9,7 @@ namespace thermoBlade
 {
 
 void calculateThermoVariables();
+void calculateThermoVariables_v2();
 void init();
 
 };

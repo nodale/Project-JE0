@@ -78,6 +78,7 @@ namespace infoBlade
     extern double resolution;
     extern sVec<double> PR;
     extern sVec<double> R;
+    extern dVec<double> Ry;
     extern dVec<double> Area;
     extern dVec<double> chord;
     extern dVec<double> maxCam;       

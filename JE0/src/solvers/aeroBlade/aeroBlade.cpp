@@ -289,12 +289,39 @@ sVec<double> multiplyAB(const dVec<double>& invA, const sVec<double>& B)
     return C;
 }
 
-std::complex<double> joukowskyTransform(std::complex<double> z, double shape, std::complex<double> thetaC)
+std::complex<double> aeroBlade::joukowskyTransform(std::complex<double> z, double shape, std::complex<double> thetaC)
 {
     return exp(thetaC) * ( z + pow(shape,2) / z) ;  
 }
 
-void aeroBlade::genBlade(int j)
+void storeAerofoilConfig(int i, int j, double disX, double disY, double backFat)
+{
+    sqlite3* db;
+    sqlite3_open("output/database/db.db", &db);
+    std::string text, rotorOrStator;
+
+    if(j == 0)
+    {
+        rotorOrStator = "_rotor";
+    }
+    if(j == 1)
+    {
+        rotorOrStator = "_stator";
+    }
+
+    text = "disX" + rotorOrStator;
+    infoBlade::storeInDesignDatabase(db, text, disX, i + 1);
+
+    text = "disY" + rotorOrStator;
+    infoBlade::storeInDesignDatabase(db, text, disY, i + 1);
+
+    text = "backFat" + rotorOrStator;
+    infoBlade::storeInDesignDatabase(db, text, backFat, i + 1);
+
+    sqlite3_close(db);
+}
+
+void aeroBlade::genBlade(int i, int j)
 {
     std::complex<double> dummyF;
     std::complex<double> displac, aerofoil;
@@ -313,6 +340,7 @@ void aeroBlade::genBlade(int j)
     disY = 0.034;
 
     readConfig(disX, disY, backFat, j);
+    storeAerofoilConfig(i, j, disX, disY, backFat);
 
     std::ofstream output("output/misc/shape.dat");
 
@@ -406,11 +434,17 @@ void aeroBlade::genBlade(int j)
             pointY.insert(pointY.end(), tempD);
         }
         input.close();
+
+        for(int R = 0; R < infoBlade::resolution; R++)
+        {
+            getAoA(i, j, R);
+        }
     }
     
 }
 
-void drawEverthing(int I, int j, int R)
+//draws the blade for stage [I, J], for a specific R, put it in a for loop
+void aeroBlade::drawEverthing(int I, int j, int R)
 {
     std::complex<double> dummyF;
     std::complex<double> displac, aerofoil;
@@ -622,7 +656,7 @@ void calculateRequiredCl()
     }
 }
 
-void getAoA(int i, int j, int R)
+void aeroBlade::getAoA(int i, int j, int R)
 {
     double dischargeY1, dischargeY2, dischargeX1, dischargeX2;
     using namespace infoBlade;
@@ -644,7 +678,7 @@ void getAoA(int i, int j, int R)
     std::cout << "incidence angle : " << incidenceAngle[i][j][R] << std::endl;
 }
 
-void storeInDatabaseRecursive()
+void aeroBlade::storeInDatabaseRecursive()
 {
     sqlite3* db;
     sqlite3_open("output/databse/db.db", &db);
@@ -655,7 +689,7 @@ void storeInDatabaseRecursive()
     storeInAeroDatabase(db, "meanAlpha1", meanAlpha[i][0], i + 1);
     storeInAeroDatabase(db, "meanAlpha2", meanAlpha[i][1], i + 1);
     storeInAeroDatabase(db, "meanBeta1", meanBeta[i][0], i + 1);
-    storeInAeroDatabase(db, "meanBeta1", meanBeta[i][1], i + 1);
+    storeInAeroDatabase(db, "meanBeta2", meanBeta[i][1], i + 1);
     storeInAeroDatabase(db, "PressureRatio", PR[i], i + 1);
     storeInAeroDatabase(db, "Area1", Area[i][0], i + 1);
     storeInAeroDatabase(db, "Area2", Area[i][1], i + 1);
@@ -1086,29 +1120,29 @@ void aeroBlade::sourceVortexPanelMethod(int i, int j, int r)
 }   
 
 //only for testing  
-int main()
-{       
-    infoBlade::dataBaseSetUp();
-    infoBlade::initConditionSetUp();    
-    thermoBlade::init();
-    aeroBlade::drawDeHallersNumber();
-    storeInDatabaseRecursive();
+// int main()
+// {       
+//     infoBlade::dataBaseSetUp();
+//     infoBlade::initConditionSetUp();    
+//     thermoBlade::init();
+//     aeroBlade::drawDeHallersNumber();
+//     storeInDatabaseRecursive();
 
-    int r = infoBlade::resolution / 2;
+//     int r = infoBlade::resolution / 2;
 
-    //aeroBlade::findCombinationAlpha(5,10000000);
+//     //aeroBlade::findCombinationAlpha(5,10000000);
 
-    // for(int j = 0; j < 2; j++)
-    // {
-    //     for(int i = 0; i < infoBlade::totalSize; i++)
-    //     {
-    //     aeroBlade::genBlade(j);
-    //     getAoA(i, j, r);
-    //     aeroBlade::sourceVortexPanelMethod(i, j ,r); 
-    //     drawEverthing(i, j, r);                          
-    //     }
-    // }
-    //calculateRequiredCl();   
+//     for(int j = 0; j < 2; j++)
+//     {
+//         for(int i = 0; i < infoBlade::totalSize; i++)
+//         {
+//         aeroBlade::genBlade(i, j);
+//         getAoA(i, j, r);
+//         aeroBlade::sourceVortexPanelMethod(i, j ,r); 
+//         drawEverthing(i, j, r);                          
+//         }
+//     }
+//     calculateRequiredCl();   
 
-    return 0;
-}
+//     return 0;
+// }

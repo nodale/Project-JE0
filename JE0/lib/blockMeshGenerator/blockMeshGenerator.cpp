@@ -1,13 +1,27 @@
 #include "blockMeshGenerator.h"
-#include <cmath>
-#include <iomanip>
-#include <ios>
-#include <limits>
+
+std::ofstream blockMeshGen::out;
+std::ofstream blockMeshGen::bmD;
+std::ofstream blockMeshGen::bmB;
+std::ofstream blockMeshGen::CFDFolder;
+
+std::vector<std::vector<double>> blockMeshGen::vertices;
+std::vector<std::vector<double>> blockMeshGen::boundary;
+std::vector<std::vector<double>> blockMeshGen::brick;
+std::vector<std::vector<double>> blockMeshGen::interpolatePoints;
+
+double blockMeshGen::separationVector;
+
+std::vector<std::vector<double>> blockMeshGen::tempValue;
+double blockMeshGen::tempLine[2][3];
+double blockMeshGen::tempPerpendicular[3];
+double blockMeshGen::tempNormal[3];
+double blockMeshGen::tempLength;
 
 void blockMeshGen::init(char* target)
 {
     out.open(target);
-    bmD.open("systemFile/blockMeshDict");
+    bmD.open("output/systemFile/blockMeshDict");
     bmB.open("boundary/boundary");
 
     //enable the following two for blockMesh

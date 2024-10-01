@@ -15,10 +15,14 @@ extern sVec<double> pointX, pointY, midPointX, midPointY;
 extern double aeroGamma, aeroCl;
 
 void sourceVortexPanelMethod(int i, int j, int r);
-void genBlade(int j);
+void genBlade(int i, int j);
 void findCombinationAlpha(int sampleSize, int maxTries);
 void drawDeHallersNumber();
 void drawDeHallersNumber_v2();
+std::complex<double> joukowskyTransform(std::complex<double> z, double shape, std::complex<double> thetaC);
+void getAoA(int i, int j, int R);
+void storeInDatabaseRecursive();
+void drawEverthing(int I, int j, int R);
 
 };
 

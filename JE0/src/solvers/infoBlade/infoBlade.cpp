@@ -38,6 +38,7 @@ double Mach0;
 double resolution;
 sVec<double> PR;
 sVec<double> R;
+dVec<double> Ry;
 dVec<double> Area;
 dVec<double> chord;
 dVec<double> maxCam;       
@@ -123,7 +124,14 @@ const char* argv =
 "   hub_radi2        REAL    NOT NULL DEFAULT 0.0,"
 "   hub_radi3        REAL    NOT NULL DEFAULT 0.0,"
 "   numBlades1       REAL    NOT NULL DEFAULT 0.0,"
-"   numBlades2       REAL    NOT NULL DEFAULT 0.0"
+"   numBlades2       REAL    NOT NULL DEFAULT 0.0,"
+"   disX_rotor       REAL    NOT NULL DEFAULT 0.0,"
+"   disY_rotor       REAL    NOT NULL DEFAULT 0.0,"
+"   backFat_rotor    REAL    NOT NULL DEFAULT 0.0,"
+"   disX_stator      REAL    NOT NULL DEFAULT 0.0,"
+"   disY_stator      REAL    NOT NULL DEFAULT 0.0,"
+"   backFat_stator   REAL    NOT NULL DEFAULT 0.0"
+
 ");"
 };
 
@@ -231,7 +239,7 @@ void infoBlade::storeInDesignDatabase(sqlite3* db, std::string variablesName, do
 {
     sqlite3_stmt* stmt;
     int check;
-    std::string sqlString = "UPDATE desginParam SET " + variablesName + " = ? WHERE STAGE = ? ;";
+    std::string sqlString = "UPDATE designParam SET " + variablesName + " = ? WHERE STAGE = ? ;";
     const char* sql = sqlString.c_str();
 
     check = sqlite3_open("output/database/db.db", &db);
