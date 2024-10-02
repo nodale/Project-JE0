@@ -11,6 +11,7 @@ namespace thermoBlade
 void calculateThermoVariables();
 void calculateThermoVariables_v2();
 void init();
+void init_v2();
 
 };
 

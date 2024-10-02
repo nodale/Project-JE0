@@ -309,10 +309,11 @@ bool infoBlade::dataBaseSetUp()
         {
             sqlite3_bind_int(stmt, 1, i);
             rc = sqlite3_step(stmt);
-            if(rc != SQLITE_DONE)
-            {
-                std::cout << "ERROR : SQLite step failed ; " << rc << std::endl;
-            }
+            //for some reasons this one keeps printing no matter the result
+            // if(rc != SQLITE_OK)
+            // {
+            //     std::cout << "ERROR : SQLite step failed ; " << rc << std::endl;
+            // }
             sqlite3_reset(stmt);
         }
     }

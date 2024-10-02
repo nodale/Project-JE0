@@ -229,20 +229,20 @@ void simBlade::generateAerofoilModel(int i, int j)
     blockMeshGen::generateObj(resolution);
 }
 
-int main()
-{
-    infoBlade::dataBaseSetUp();
-    infoBlade::initConditionSetUp();    
-    thermoBlade::init();
-    aeroBlade::genBlade(0, 0);
-    aeroBlade::drawDeHallersNumber();
-    aeroBlade::storeInDatabaseRecursive();
-    simBlade::storeInDatabaseRecursive();
-    for(int i = 0; i < infoBlade::totalSize; i++)
-    {
-    aeroBlade::drawEverthing(i, 0, 85);
-    }
-    simBlade::generateAerofoilModel(0, 0);
+// int main()
+// {
+//     infoBlade::dataBaseSetUp();
+//     infoBlade::initConditionSetUp();    
+//     thermoBlade::init();
+//     aeroBlade::genBlade(0, 0);
+//     aeroBlade::drawDeHallersNumber();
+//     aeroBlade::storeInDatabaseRecursive();
+//     simBlade::storeInDatabaseRecursive();
+//     for(int i = 0; i < infoBlade::totalSize; i++)
+//     {
+//     aeroBlade::drawEverthing(i, 0, 85);
+//     }
+//     simBlade::generateAerofoilModel(0, 0);
 
-    return 0;
-}
+//     return 0;
+// }

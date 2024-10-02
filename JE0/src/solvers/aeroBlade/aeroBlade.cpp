@@ -964,8 +964,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     
 }
 
-//only use this if disX is positive
-void aeroBlade::sourceVortexPanelMethod(int i, int j, int r)
+void aeroBlade::sourceVortexPanelMethodAngle(int i, int j, int r)
 {
     using namespace aeroBlade;
     double temp;
@@ -1118,6 +1117,160 @@ void aeroBlade::sourceVortexPanelMethod(int i, int j, int r)
     std::cout << "total lift coefficient : " << aeroBlade::aeroCl << std::endl;
 
 }   
+
+void aeroBlade::sourceVortexPanelMethodNoAngle(int i, int j, int r)
+{
+    using namespace aeroBlade;
+    double temp;
+    dVec<double> avg;
+    dVec<double> matrixA, inverseMatrixA;
+    sVec<double> matrixB, aeroCp, aeroCN, aeroCA, aeroCm, aeroCL;
+
+    double AoA = 0.0;
+    double Vinf = 1.0; //infoBlade::VX[0];
+
+    std::ifstream input("output/misc/shape.dat");
+    std::string tempS;
+    double tempD;
+    int numPanels = infoBlade::resolution - 1;
+    int numBoundaries = infoBlade::resolution;          
+    for(int i = 0; i < numBoundaries; i++)                                                  
+    {
+        std::getline(input, tempS);
+        std::istringstream lineStream(tempS);
+
+        lineStream >> tempD;
+        pointX.insert(pointX.end(), tempD);
+
+        lineStream >> tempD;
+        pointY.insert(pointY.end(), tempD);
+
+    }
+
+    for(int i = 0; i < numPanels; i++)
+    {
+        int j = i + 1;
+
+        temp = atan2( (pointY[j] - pointY[i]), (pointX[j] - pointX[i]) );
+        //avg.insert(avg.end(), { pointX[i] + 0.5 * (pointX[j] - pointX[i]), pointY[i] + 0.5 * (pointY[j] - pointY[i]) });
+        midPointX.insert(midPointX.end(), pointX[i] + 0.5 * (pointX[j] - pointX[i]) );
+        midPointY.insert(midPointY.end(), pointY[i] + 0.5 * (pointY[j] - pointY[i]) );
+        phi.insert(phi.end(), temp);       
+        //std::cout << temp * RadToDegree << std::endl;
+        Sj.insert(Sj.end(), sqrt( pow( pointX[j] - pointX[i], 2) + pow( pointY[j] - pointY[i], 2) ) );     
+    }
+    //temp = atan2( (pointY[0] - pointY[infoBlade::resolution - 1]), (pointX[0] - pointX[infoBlade::resolution - 1]) );
+    
+    //the following is for checking the normal, its a sanity check
+    // std::ofstream output("output/misc/shape.dat", std::ios_base::app);      
+    // for(int i = 0; i < infoBlade::resolution - 1; i++)
+    // {
+    //     output << "\n";
+    //     output << avg[i][0] << " " << avg[i][1] << std::endl;
+    //     output << avg[i][0] + 0.05 * cos(phi[i]) << " " << avg[i][1] + 0.05 * sin(phi[i]) << std::endl;
+    // }
+    // output.close();
+
+    I.resize(numPanels);
+    J.resize(numPanels);
+    K.resize(numPanels);
+    L.resize(numPanels);
+    lambda.resize(numPanels);
+    for(int i = 0; i < I.size(); i++)
+    {
+        I[i].resize(numPanels);
+        J[i].resize(numPanels);
+        K[i].resize(numPanels);
+        L[i].resize(numPanels);
+    }
+
+    calculateIJ();   
+    calculateKL();
+
+    matrixA.resize(numPanels + 1);
+    matrixB.resize(numPanels + 1);
+
+    for(int i = 0; i < numPanels + 1; i++)
+    {
+        matrixA[i].resize(numPanels + 1);
+    }
+
+    for(int i = 0; i < numPanels; i++)
+    {
+        matrixB[i] = -2 * Vinf * PI * cos(phi[i] + PI / 2.0 - AoA);
+        for(int j = 0; j < numPanels; j++)
+        {
+            matrixA[i][j] = I[i][j];
+            matrixA[i][numPanels] += -K[i][j];  
+            //std::cout << matrixA[i][j] << " " << i << " " << j << std::endl;      
+        }
+        matrixA[i][i] = PI;
+    }
+
+    matrixB[numPanels] = -Vinf * 2 * PI * ( sin(phi[0] + PI / 2.0 - AoA) + sin(phi[numPanels - 1] + PI / 2.0 - AoA));
+
+    double sumL = 0;
+    for(int j = 0; j < numPanels; j++)
+    {
+        sumL += L[0][j] + L[numPanels - 1][j];
+        matrixA[numPanels][j] = J[0][j] + J[numPanels - 1][j];
+    }
+
+    matrixA[numPanels][numPanels] = 2 * PI - sumL;        
+    inverseMatrixA = inverseLU_v2(matrixA);     
+
+    //outstream for sanity check
+    std::ofstream out2("output/misc/matrixA.dat");
+    for(int i = 0; i <= numPanels; i++)
+    {
+        for(int j = 0; j <= numPanels; j++)
+        {
+            out2 << matrixA[i][j] << " ";
+        }
+        out2 << "\n";
+    }
+
+    aeroBlade::lambda = multiplyAB(inverseMatrixA, matrixB);
+    double sumV = 0;
+    for(int i = 0; i < numPanels; i++)
+    {
+        for(int j = 0; j < numPanels; j++)
+        {
+            sumV += lambda[j] * J[i][j] / ( 2.0 * PI ) - aeroBlade::aeroGamma * L[i][j] / ( 2.0 * PI );
+        }
+        Vt.insert(Vt.end(), Vinf * sin(phi[i] + PI / 2.0 - AoA) + 0.5 * aeroBlade::aeroGamma + sumV);
+        sumV = 0;
+    }
+
+    //std::ofstream CL_outstream("output/misc/Cl.dat");
+    std::ofstream CP_outstream("output/misc/Cp.dat");
+    for(int i = 0; i < numPanels; i++)
+    { 
+        int j = i + 1;
+        if( j >= numPanels)
+        {
+            j = 0;
+        }
+        aeroCp.insert(aeroCp.end(), 1.0 - pow( (Vt[i] / (double)Vinf) , 2.0 ));
+        aeroCN.insert(aeroCN.end(), -aeroCp[i] * Sj[j] * sin(phi[i] + PI / 2.0 - AoA) );
+        aeroCA.insert(aeroCA.end(), -aeroCp[i] * Sj[j] * cos(phi[i] + PI / 2.0 - AoA) );
+        aeroCL.insert(aeroCL.end(), aeroCN[i] * cos(AoA) - aeroCA[i] * sin(AoA));
+        //CL_outstream << pointX[i] << " " << aeroCL[i] << "\n";
+        CP_outstream << pointX[i] << " " << aeroCp[i] << "\n";
+    }
+    //CL_outstream.close();    
+    CP_outstream.close();    
+
+    double sumLength = 0.0;
+    for(int i = 0; i < numBoundaries; i++)
+    {
+        sumLength += Sj[i];         
+    }   
+    aeroBlade::aeroCl = sumLength * 2 * aeroBlade::aeroGamma;
+
+    std::cout << "total lift coefficient : " << aeroBlade::aeroCl << std::endl;
+
+}
 
 //only for testing  
 // int main()

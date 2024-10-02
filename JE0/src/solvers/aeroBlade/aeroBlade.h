@@ -14,7 +14,6 @@ extern sVec<double> pointX, pointY, midPointX, midPointY;
 
 extern double aeroGamma, aeroCl;
 
-void sourceVortexPanelMethod(int i, int j, int r);
 void genBlade(int i, int j);
 void findCombinationAlpha(int sampleSize, int maxTries);
 void drawDeHallersNumber();
@@ -23,6 +22,9 @@ std::complex<double> joukowskyTransform(std::complex<double> z, double shape, st
 void getAoA(int i, int j, int R);
 void storeInDatabaseRecursive();
 void drawEverthing(int I, int j, int R);
+
+void sourceVortexPanelMethodAngle(int i, int j, int r);
+void sourceVortexPanelMethodNoAngle(int i, int j, int r);
 
 };
 

@@ -713,8 +713,30 @@ void thermoBlade::calculateThermoVariables_v2()
 
 }
 
-//use this  
 void thermoBlade::init()
+{
+    sqlite3* db;
+    int rc;
+
+    resizeAndReserve();
+
+    using namespace infoBlade;
+    {
+    rc = sqlite3_open("output/database/db.db", &db);
+    if(rc != SQLITE_OK)
+    {
+        std::cout << "ERROR : failed opening the database at init;\n";
+    }
+    
+    thermoBlade::calculateThermoVariables();
+    
+    storeInDatabaseRecursive(db);
+
+    sqlite3_close(db);  
+    } 
+}  
+
+void thermoBlade::init_v2()
 {
     sqlite3* db;
     int rc;
@@ -735,7 +757,7 @@ void thermoBlade::init()
 
     sqlite3_close(db);  
     } 
-}   
+} 
 
 //only for testing
 // int main()
