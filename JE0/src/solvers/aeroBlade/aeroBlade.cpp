@@ -12,7 +12,6 @@ sVec<double> aeroBlade::midPointY;
 double aeroBlade::aeroGamma, aeroBlade::aeroCl;
 double A, B, Cn, Dn, Ct, Dt, E;
 
-
 //reads the aerofoilConfig.dat file
 void readConfig(double& disX, double& disY, double& backFat, int j)
 {
@@ -338,7 +337,7 @@ void aeroBlade::genBlade(int i, int j)
     double U = 1.0;
 
     readConfig(disX, disY, backFat, j);
-    storeAerofoilConfig(i, j, disX, disY, backFat);
+    //storeAerofoilConfig(i, j, disX, disY, backFat);
 
     std::ofstream output("output/misc/shape.dat");
     
@@ -805,12 +804,12 @@ void aeroBlade::drawDeHallersNumber_v2()
 
 }
 
-void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
+int aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
 {
     std::uniform_int_distribution<> distr2(20, 40); //omega1
     std::uniform_int_distribution<> distr3(-70, 70); //alpha1 angles
     float dir1, dir2;
-    double theta, smallestGradient;
+    double theta1, theta2, smallestGradient;
     std::random_device rd1;
     dVec<int> suitableAlphas;
     dVec<int> successfulAlphas;
@@ -829,11 +828,8 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
 
     bool firstAttempt = true;
 
-    if(j == 0)
-    {
-        dir1 = 1.8;
-        dir2 = -1.8;
-    }
+    dir1 = 1.8;
+    dir2 = -1.8;
     
     for(int nklf = 0; nklf < sampleSize; nklf++) //sample size
     {
@@ -849,19 +845,14 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     {
         std::cout << "no design fits the given RPM, increase the maxTries or change the RPM\n";
         std::cout << "number of combinations found so far : " << nklf << std::endl;
-        std::terminate();
+        return 0;
     }
     
     while(true)
     {               
-    if(j == 0)
-    {
-    theta = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
-    }
-    if(j == 1)          
-    {
-    theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
-    }
+   
+    theta1 = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+    theta2 = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
     
     lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
     lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
@@ -875,11 +866,11 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
     liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
 
-    std::cout << solidity[i][0] << " " << solidity[i][1] << " " << theta << " " << liftCoefficient[i][0][r] << " " << liftCoefficient[i][1][r] << std::endl;
+    std::cout << solidity[i][0] << " " << solidity[i][1] << " " << theta1 << " " << theta2 << " " << liftCoefficient[i][0][r] << " " << liftCoefficient[i][1][r] << std::endl;
 
     if
     (
-    theta >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0
+    theta1 >= 0.73 && theta2 >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0
      && firstAttempt == false && liftCoefficient[i][1][r] <= dir1 && liftCoefficient[i][1][r] >= dir2 && solidity[i][1] <= 5.0
     )
     {
@@ -887,13 +878,14 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
         {
         tempGradient[i].insert(tempGradient[i].end(), liftCoefficient[i][j][r] - liftCoefficient[i][j][r-1]);
         }
-        if(r == resolution && i == totalSize - 1)
+        if(r == resolution -1 && i == totalSize - 1)
         {
             for( int g = 0; g < totalSize; g++)
             {
                 stageSmallestGradient.insert(stageSmallestGradient.end(), std::max_element(tempGradient[g].begin(), tempGradient[g].end())[0]);
                 suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[g][0]);
                 suitableOmega1.insert(suitableOmega1.end(), tempOmega1);
+                tempGradient[g].clear();
                 //std::cout << stageSmallestGradient[j] << std::endl;
             }
             localSmallestGradient.insert(localSmallestGradient.end(), std::max_element(stageSmallestGradient.begin(), stageSmallestGradient.end())[0]);
@@ -901,7 +893,6 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
             //std::cout << "combination no " << nklf << " passes\n";      
 
             stageSmallestGradient.clear();
-            tempGradient.clear();
 
             firstAttempt = true;
             tries = 0;
@@ -918,7 +909,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
         for(int m = 0; m < lowSize; m++)
         {
             //PR[m] = tempB;
-            omega1 = distr2(rd1) * 200;
+            //omega1 = distr2(rd1) * 200;
             tempOmega1 = omega1;
             meanAlpha[m][0] = distr3(rd1);
         }
@@ -926,7 +917,7 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
         for(int m = lowSize; m < totalSize; m++)
         {
             //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
-            omega1 = distr2(rd1) * 200;
+            //somega1 = distr2(rd1) * 200;
             meanAlpha[m][0] = distr3(rd1);
         }
         
@@ -956,14 +947,184 @@ void aeroBlade::findCombinationAlpha(int sampleSize, int maxTries)
     auto index = std::find(localSmallestGradient.begin(),localSmallestGradient.end(), smallestGradient);
     size_t dist = std::distance(localSmallestGradient.begin(), index);
 
-    storeInDatabaseRecursive();
+    std::cout << "The following combination has been stored : ";
 
     for(int c = 0; c < totalSize; c++)
     {
-        std::cout << suitableAlphas[dist][c] << std::endl;
+        meanAlpha[c][0] = suitableAlphas[dist][c];
+        std::cout << suitableAlphas[dist][c] << " ";
     }
-    std::cout << omega1 << std::endl;
+
+    thermoBlade::calculateThermoVariables();
+    storeInDatabaseRecursive();
+
+    std::cout << "\n";
+    //std::cout << omega1 << std::endl;
+    return 0;
+}
+
+int aeroBlade::findCombinationFull(int sampleSize, int maxTries)
+{
+    std::uniform_int_distribution<> distr2(2, 700); //omega1
+    std::uniform_int_distribution<> distr3(-70, 70); //alpha1 angles
+    float dir1, dir2;
+    double theta1, theta2, smallestGradient;
+    std::random_device rd1;
+    dVec<int> suitableAlphas;
+    dVec<int> successfulAlphas;
+    sVec<double> accumulatedSmallestGradient;
+    sVec<double> localSmallestGradient;
+    sVec<double> stageSmallestGradient;
+    dVec<double> tempGradient;
+    sVec<double> suitableOmega1;
+    sVec<double> suitableOmega2;
+    int tempOmega1 = infoBlade::omega1;
+    int tempOmega2 = infoBlade::omega2;
+    int j = 0;
+    int tries = 0;
+    using namespace infoBlade;
+
+    tempGradient.resize(totalSize);
+    suitableAlphas.resize(sampleSize);
+
+    bool firstAttempt = true;
+
+    dir1 = 1.8;
+    dir2 = -1.8;
     
+    for(int nklf = 0; nklf < sampleSize; nklf++) //sample size
+    {
+
+        for(int i = 0; i < totalSize ; i++)
+        {
+
+            for(int r = 0; r < resolution; r++)    
+            {
+            
+                tries += 1;
+                if(tries >= maxTries)
+                {
+                    std::cout << "no design fits the given RPM, increase the maxTries or change the RPM\n";
+                    std::cout << "number of combinations found so far : " << nklf << std::endl;
+                    return 0;
+                }
+                
+                while(true)
+                {               
+                theta1 = cos(beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+                theta2 = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+                
+                lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+                lossCoefficient[i][1][r] = 0.014 * solidity[i][j] / cos( alpha[i+1][0][r] / RadToDegree );
+                
+                Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+                Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+                pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+                pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+                liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+                liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+                //std::cout << solidity[i][0] << " " << solidity[i][1] << " " << theta << " " << liftCoefficient[i][0][r] << " " << liftCoefficient[i][1][r] << std::endl;
+
+                if
+                (
+                theta1 >= 0.73 && theta2 >= 0.73 && liftCoefficient[i][0][r] <= dir1 && liftCoefficient[i][0][r] >= dir2 && solidity[i][0] <= 5.0
+                && firstAttempt == false && liftCoefficient[i][1][r] <= dir1 && liftCoefficient[i][1][r] >= dir2 && solidity[i][1] <= 5.0
+                )
+                {
+                    if(r > 0)
+                    {
+                    tempGradient[i].insert(tempGradient[i].end(), liftCoefficient[i][j][r] - liftCoefficient[i][j][r-1]);
+                    }
+                    if(r == resolution - 1 && i == totalSize - 1)
+                    {
+                        for( int g = 0; g < totalSize; g++)
+                        {
+                            stageSmallestGradient.insert(stageSmallestGradient.end(), std::max_element(tempGradient[g].begin(), tempGradient[g].end())[0]);
+                            suitableAlphas[nklf].insert(suitableAlphas[nklf].end(), meanAlpha[g][0]);
+                            suitableOmega1.insert(suitableOmega1.end(), tempOmega1);
+                            suitableOmega2.insert(suitableOmega1.end(), tempOmega2);
+                            tempGradient[g].clear();
+                            //std::cout << stageSmallestGradient[j] << std::endl;
+                        }
+                        localSmallestGradient.insert(localSmallestGradient.end(), std::max_element(stageSmallestGradient.begin(), stageSmallestGradient.end())[0]);
+                        
+                        //std::cout << "combination no " << nklf << " passes\n";      
+
+                        stageSmallestGradient.clear();
+
+                        firstAttempt = true;
+                        tries = 0;
+                    }
+                    break;
+                }
+                else                                        
+                {          
+                    firstAttempt = false; 
+                    tempGradient[i].clear();     
+                    suitableAlphas[nklf].clear();
+
+                    //int tempA = distr3(rd1) * 2;        
+                    for(int m = 0; m < lowSize; m++)
+                    {
+                        //PR[m] = tempB;
+                        omega1 = distr2(rd1) * 20;
+                        tempOmega1 = omega1;
+                        meanAlpha[m][0] = distr3(rd1);
+                    }
+                    //tempA = distr3(rd1) * 2;
+                    for(int m = lowSize; m < totalSize; m++)
+                    {
+                        //PR[m] = pow( 14 / pow( tempB, 3 ) , 1.0 / 8.0 );
+                        omega2 = distr2(rd1) * 20;
+                        tempOmega2 = omega2;
+                        meanAlpha[m][0] = distr3(rd1);
+                    }
+                    
+                    //std::cout << "trying the following combination: " << omega1 << " //" << omega2 << " ";
+
+                    thermoBlade::calculateThermoVariables();
+
+                    //std::cout << "\n";
+
+                    r = 0;
+                    i = 0;
+                }
+
+                }
+
+            }
+        }
+
+    //accumulatedSmallestGradient.insert(accumulatedSmallestGradient.end(), std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0]);
+
+    }
+    // for(int l = 0; l < sampleSize; l++)
+    // {
+    //     std::cout << localSmallestGradient[l] << std::endl;
+    // }
+    smallestGradient = std::min_element(localSmallestGradient.begin(), localSmallestGradient.end())[0];
+    auto index = std::find(localSmallestGradient.begin(),localSmallestGradient.end(), smallestGradient);
+    size_t dist = std::distance(localSmallestGradient.begin(), index);
+
+    std::cout << "The following combination has been stored : ";
+
+    for(int c = 0; c < totalSize; c++)
+    {
+        meanAlpha[c][0] = suitableAlphas[dist][c];
+        std::cout << suitableAlphas[dist][c] << " ";
+    }
+
+    omega1 = suitableOmega1[dist];
+
+    thermoBlade::calculateThermoVariables();
+    storeInDatabaseRecursive();
+
+    std::cout << "with omega1 : " << omega1 << " and omega2 : " << omega2 << std::endl;
+    std::cout << "\n";
+    return 0;
 }
 
 void aeroBlade::sourceVortexPanelMethodAngle(int i, int j, int r)

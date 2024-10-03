@@ -15,7 +15,8 @@ extern sVec<double> pointX, pointY, midPointX, midPointY;
 extern double aeroGamma, aeroCl;
 
 void genBlade(int i, int j);
-void findCombinationAlpha(int sampleSize, int maxTries);
+int findCombinationAlpha(int sampleSize, int maxTries);
+int findCombinationFull(int sampleSize, int maxTries);
 void drawDeHallersNumber();
 void drawDeHallersNumber_v2();
 std::complex<double> joukowskyTransform(std::complex<double> z, double shape, std::complex<double> thetaC);

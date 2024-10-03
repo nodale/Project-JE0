@@ -56,6 +56,93 @@ void drawBlade(int active, FILE* pipe)
     }
 }
 
+void storeConfig(std::istringstream& stream)
+{
+    double disX, disY, backFat;
+
+    int stage, j;
+
+    std::string temp1;
+
+    std::ifstream input("input/aerofoilConfig.dat");
+
+    std::getline(input, temp1);
+    disX = std::stod(temp1);
+    std::getline(input, temp1);
+
+    if(j == 1)
+    {
+        disY = -std::stod(temp1);
+    }
+    if(j == 0)
+    {
+        disY = std::stod(temp1);
+    }
+
+    std::getline(input, temp1);
+    backFat = std::stod(temp1);
+
+    if(stream >> stage >> j)
+    {
+        sqlite3* db;
+        sqlite3_open("output/database/db.db", &db);
+
+        std::string text, rotorOrStator;
+
+        if(j == 0)
+        {
+            rotorOrStator = "_rotor";
+        }
+        if(j == 1)
+        {
+            rotorOrStator = "_stator";
+        }
+
+        text = "disX" + rotorOrStator;
+        infoBlade::storeInDesignDatabase(db, text, disX, stage);
+
+        text = "disY" + rotorOrStator;
+        infoBlade::storeInDesignDatabase(db, text, disY, stage);
+
+        text = "backFat" + rotorOrStator;
+        infoBlade::storeInDesignDatabase(db, text, backFat, stage);
+    }
+    else
+    {
+        std::cout << "USAGE : CONFIRMCONFIG <numStage> <1 for rotor, 2 for stator>\n";
+    }
+}
+
+void findRandomCombinationAlpha(std::istringstream& stream)
+{
+    int sampleSize, maxTries;
+
+    if(stream >> sampleSize >> maxTries)
+    {
+        std::cout << "Finding the best random alpha1 combination out of " << sampleSize << " samples\n";
+        aeroBlade::findCombinationAlpha(sampleSize,maxTries);
+    }
+    else
+    {
+        std::cout << "USAGE : RANDOMALPHA <sampleSize> <maxAttempts>\n";
+    }
+}
+
+void findRandomCombinationFull(std::istringstream& stream)
+{
+    int sampleSize, maxTries;
+
+    if(stream >> sampleSize >> maxTries)
+    {
+        std::cout << "Finding the best random alpha1 and omega1 combination out of " << sampleSize << " samples\n";
+        aeroBlade::findCombinationFull(sampleSize,maxTries);
+    }
+    else
+    {
+        std::cout << "USAGE : RANDOMALPHA <sampleSize> <maxAttempts>\n";
+    }
+}
+
 //TODO
 //Maybe move getAoA somewhere else
 
@@ -94,6 +181,18 @@ void AEROBLADE::init()
         if(command == "DRAWBL" or active != 0)
         {
             drawBlade(active, pipe);
-        }                            
+        }           
+        if(command == "CONFIRMCONFIG")
+        {
+            storeConfig(stream);
+        }    
+        if(command == "RANDOMCOMBALPHA")
+        {   
+            findRandomCombinationAlpha(stream);
+        }
+        if(command == "RANDOMCOMBFULL")
+        {   
+            findRandomCombinationFull(stream);
+        }             
     }
 }

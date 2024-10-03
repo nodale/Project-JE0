@@ -95,12 +95,15 @@ void storeInDatabaseRecursive(sqlite3* db)
         storeInThermoDatabase(db, "a", a[i], i + 1);
         storeInThermoDatabase(db, "b", b[i], i + 1);
 
-        storeInThermoDatabase(db, "Wr",Wr[i], i + 1);
-        storeInThermoDatabase(db, "Ws",Ws[i], i + 1);
+        storeInThermoDatabase(db, "Wr",work[i] * R[i], i + 1);
+        storeInThermoDatabase(db, "Ws",work[i] * ( 1.0 - R[i] ), i + 1);
 
         storeInThermoDatabase(db, "efficiency1",efficiency[i][0], i + 1);
         storeInThermoDatabase(db, "efficiency2",efficiency[i][1], i + 1);
         //storeInDatabase(db, "efficiency3",efficiency[i][2], i + 1);
+
+        storeInDesignDatabase(db, "numBlades1",numBlades[i][0], i + 1);
+        storeInDesignDatabase(db, "numBlades2",numBlades[i][1], i + 1);
     }
 }
 
