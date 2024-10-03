@@ -37,22 +37,74 @@ void configureCompressionRatio(std::istringstream& stream)
     std::string temp;
 
     std::ofstream input("input/compressionRatioConfig.dat");
-    std::ifstream readOne("input/compressionRatioConfig.dat");
+    std::ifstream readOne("input/initCondInput.dat");
 
     std::getline(readOne, temp);
     totalSize = std::stoi(temp);
+    double tempOut[totalSize];
+
+    std::cout << "Compression Ratios are set to : ";
 
     for(int i = 0; i < totalSize; i++)
     {
         stream >> tempRatio;
         if(stream.fail())
         {
-            std::cout << "Invalid Arguments\n";
-            std::cout << "Usage : CRCONFIG <num1> <num2> ... <numN>\n";
+            std::cout << "\nInvalid Arguments\n";
+            std::cout << "Usage : CONFIGCR <num1> <num2> ... <numStages>\n";
+            break;
         }
         input << tempRatio << "\n";
+        std::cout << tempRatio << " ";
     }
+    std::cout << "\n";
 
     input.close();
 }
 
+void configureInitAlpha(std::istringstream& stream)
+{
+    double tempAlpha;
+    int totalSize;
+    std::string temp;
+
+    std::ofstream input("input/initialAlphaConfig.dat");
+    std::ifstream readOne("input/initCondInput.dat");
+
+    std::getline(readOne, temp);
+    totalSize = std::stoi(temp);
+    double tempOut[totalSize];
+
+    std::cout << "Initial Alphas are set to : ";
+
+    for(int i = 0; i <= totalSize; i++)
+    {
+        stream >> tempAlpha;
+        if(stream.fail())
+        {
+            std::cout << "\nInvalid Arguments\n";
+            std::cout << "Usage : CONFIGAL <num1> <num2> ... <numStages + 1>\n";
+            break;
+        }
+        input << tempAlpha << "\n";
+        std::cout << tempAlpha << " ";
+    }
+    std::cout << "\n";
+
+    input.close();
+}
+
+void deleteDatabase()
+{
+    int rc;
+    rc = std::system("rm output/database/db.db");
+    
+    if(rc == -1)
+    {
+        std::cout << "ERROR : Database has not been deleted\n";
+    }
+    else
+    {
+        std::cout << "Database has been deleted\n";
+    }
+}

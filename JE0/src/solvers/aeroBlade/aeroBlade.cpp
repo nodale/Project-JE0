@@ -326,6 +326,9 @@ void aeroBlade::genBlade(int i, int j)
     std::complex<double> dummyF;
     std::complex<double> displac, aerofoil;
 
+    pointX.clear();
+    pointY.clear();
+
     //default values for the aerofoil configuration
     double r, shape, extraR;
     r = 1.0;
@@ -333,17 +336,12 @@ void aeroBlade::genBlade(int i, int j)
     double multiplier = 1.0;
     double psiA, psiC, disX, disY, backFat;
     double U = 1.0;
-    psiA = 0.022;
-    psiC = 0.012;
-    backFat = 1.02;
-    disX = psiA;// - psiC * cos( 0 );
-    disY = 0.034;
 
     readConfig(disX, disY, backFat, j);
     storeAerofoilConfig(i, j, disX, disY, backFat);
 
     std::ofstream output("output/misc/shape.dat");
-
+    
     displac = std::complex<double>(disX, disY);
     extraR = sqrt( pow( r - fabs( displac.real() ) , 2 ) + pow( displac.imag() , 2 ) );
     using namespace aeroBlade;
@@ -358,6 +356,9 @@ void aeroBlade::genBlade(int i, int j)
                 
                 pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
                 pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag());           
+
+                // pointX[i] = 0.25 * ( aerofoil.real() + 2.0 );
+                // pointY[i] = 0.25 * aerofoil.imag();     
 
                 gh -= 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 i++;
@@ -415,6 +416,7 @@ void aeroBlade::genBlade(int i, int j)
                 output << pointX[i] << " " << pointY[i] << std::endl;
             }
         }
+        output.close();
 
         pointX.clear();
         pointY.clear();
@@ -675,7 +677,7 @@ void aeroBlade::getAoA(int i, int j, int R)
     incidenceAngle[i][j][R] = alpha[i][1][R] - rotateAngle[i][j][R];
     }
 
-    std::cout << "incidence angle : " << incidenceAngle[i][j][R] << std::endl;
+    //std::cout << "incidence angle : " << incidenceAngle[i][j][R] << std::endl;
 }
 
 void aeroBlade::storeInDatabaseRecursive()

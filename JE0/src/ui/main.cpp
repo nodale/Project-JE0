@@ -45,6 +45,14 @@ int main()
         {
             configureCompressionRatio(stream);
         }
+        if(command == "CONFIGAL")
+        {
+            configureInitAlpha(stream);
+        }
+        if(command == "DELETEDB")
+        {
+            deleteDatabase();
+        }
         // else
         // {
         //     std::cout << "Unknown command\n";

@@ -16,5 +16,7 @@ void initialiseInitCond();
 void initialiseThermoVar();
 void initialiseThermoVar_v2();
 void configureCompressionRatio(std::istringstream& stream);
+void configureInitAlpha(std::istringstream& stream);
+void deleteDatabase();
 
 #endif
