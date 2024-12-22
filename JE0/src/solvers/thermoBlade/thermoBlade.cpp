@@ -316,6 +316,48 @@ void getBladeElementsAngles()
     }
 }
 
+void calculateRequiredCl()
+{
+    using namespace infoBlade;
+    for(int i = 0; i < totalSize; i++)
+    {
+    double theta, yValue;
+
+        for(int r = 0; r <= resolution; r++)
+        {
+        
+            // if(j == 0)
+            // {
+            // theta = cos (beta[i][0][r]/RadToDegree) / cos(beta[i][1][r]/RadToDegree); 
+            // }
+            // if(j == 1)
+            // {
+            // theta = cos(alpha[i+1][0][r]/RadToDegree) / cos(alpha[i][1][r]/RadToDegree); 
+            // }
+
+            //get loss coefficients, not extremely accurate but it's alright
+            lossCoefficient[i][0][r] = 0.014 * solidity[i][0] / cos( beta[i][1][r] / RadToDegree );
+            lossCoefficient[i][1][r] = 0.014 * solidity[i][1] / cos( alpha[i+1][0][r] / RadToDegree );
+
+            Mach[i][0][r] = VX[0] / ( cos( beta[i][1][r] / RadToDegree ) * pow( Temperature[i][1] * 287 * gamma , 0.5 ) );
+            Mach[i][1][r] = VX[0] / ( cos( alpha[i+1][0][r] / RadToDegree ) * pow( Temperature[i][2] * 287 * gamma , 0.5 ) );
+
+            //pressure loss is in Kpascal
+            pressureLoss[i][0][r] = 0.000005 * rho[i][1] * lossCoefficient[i][0][r] * pow( VX[0] / cos( beta[i][1][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][0][r] , 2 ) , gamma / ( gamma - 1 ) );
+            pressureLoss[i][1][r] = 0.000005 * rho[i][2] * lossCoefficient[i][1][r] * pow( VX[0] / cos( alpha[i+1][0][r] / RadToDegree ) , 2 ) * pow( 1 + 0.5 * ( gamma - 1 ) * pow( Mach[i][1][r] , 2 ) , gamma / ( gamma - 1 ) );
+
+            liftCoefficient[i][0][r] = 2.0 / solidity[i][0] * ( tan( beta[i][0][r] / RadToDegree ) - tan( beta[i][1][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][0][r] * sin( 0.5 * ( tan( beta[i][0][r] / RadToDegree ) + tan( beta[i][1][r] / RadToDegree ) ) ) / ( rho[i][1] * pow( 0.5 * ( VX[0] / cos( beta[i][0][r] / RadToDegree ) + VX[0] / cos( beta[i][1][r] / RadToDegree ) ) , 2 ) * solidity[i][0] );
+            liftCoefficient[i][1][r] = 2.0 / solidity[i][1] * ( tan( alpha[i][1][r] / RadToDegree ) - tan( alpha[i+1][0][r] / RadToDegree ) ) * cos( atan( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) ) - 2 * pressureLoss[i][1][r] * sin( 0.5 * ( tan( alpha[i][1][r] / RadToDegree ) + tan( alpha[i+1][0][r] / RadToDegree ) ) ) / ( rho[i][2] * pow( 0.5 * ( VX[1] / cos( alpha[i][1][r] / RadToDegree ) + VX[1] / cos( alpha[i+1][0][r] / RadToDegree ) ) , 2 ) * solidity[i][1] );
+
+            //batchAnalysis[i] << theta << " " <<  liftCoefficient[i][j][r] << "\n";
+
+            //efficiency analysis
+            //double dummyEfficiency = 1 - ( lossCoefficient[i][0][r] / pow ( cos( alpha[i+1][0][r] / RadToDegree ), 2 ) + lossCoefficient[i][1][r] / pow ( cos( beta[i][0][r] / RadToDegree ), 2 ) ) * pow( phi[i] , 2 ) / ( 2 * psi[i] );
+            //batchAnalysis[i] << r << " " <<  dummyEfficiency << "\n";
+        }
+    }
+}
+
 void thermoBlade::calculateThermoVariables()
 {
     using namespace infoBlade;
@@ -524,6 +566,7 @@ void thermoBlade::calculateThermoVariables()
     chord[0][0] = chord[1][0];
 
     getBladeElementsAngles();
+    calculateRequiredCl();
 
 }
 
@@ -713,6 +756,7 @@ void thermoBlade::calculateThermoVariables_v2()
     chord[0][0] = chord[1][0];
 
     getBladeElementsAngles();
+    calculateRequiredCl();
 
 }
 

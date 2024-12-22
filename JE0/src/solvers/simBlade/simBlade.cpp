@@ -117,7 +117,6 @@ void simBlade::generateAerofoilModel(int i, int j)
     for(int R = 0; R < resolution; R++)
     {
         radius = hub_radi[i][j] + dr * R;
-        aeroBlade::getAoA(i, j, R);
         using namespace aeroBlade;
         {
             if( (disX < 0 && disY >= 0) or (disX > 0 && disY <= 0) )
@@ -126,6 +125,9 @@ void simBlade::generateAerofoilModel(int i, int j)
                 {
                     dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
                     aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R]) / RadToDegree);
+
+                    pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                    pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag()); 
 
                     blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius - hub_radi[i][j] );
 
@@ -140,10 +142,15 @@ void simBlade::generateAerofoilModel(int i, int j)
                     dummyF = std::complex( extraR * cos( gh ) / backFat + displac.real(), extraR * sin(gh) / backFat + displac.imag());
                     aerofoil = joukowskyTransform(dummyF, shape, std::complex<double>(0.0, rotateAngle[i][j][R]) / RadToDegree);
                     
+                    pointX.insert(pointX.begin() + i, 0.25 * ( aerofoil.real() + 2.0 ));
+                    pointY.insert(pointY.begin() + i, 0.25 * aerofoil.imag()); 
+
                     blockMeshGen::collectVertices( aerofoil.real() * dummyScale / 4.0 , aerofoil.imag() * dummyScale / 4.0, radius - hub_radi[i][j] );
                     gh += 2.0 * ( PI ) / (double)infoBlade::resolution / multiplier;
                 }
             }
+
+            aeroBlade::getAoA(i, j, R);
         }
 
         if(R == 0 or R == resolution - 1)

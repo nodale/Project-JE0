@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../../solvers/aeroBlade/aeroBlade.h"
+#include "../../solvers/simBlade/simBlade.h"
 
 namespace AEROBLADE
 {
